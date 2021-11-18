@@ -1,5 +1,7 @@
 package src.application;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -7,23 +9,33 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.cell.MapValueFactory;
 import javafx.stage.Stage;
-import org.json.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.HashMap;
+import java.util.Map;
 
+//todo: Источник: http://tutorials.jenkov.com/javafx/tableview.html
 public class LoginController {
-
     @FXML
     private TextField login;
     @FXML
     private TextField password;
     @FXML
     private Button logIn;
+    @FXML
+    private TableView<String> tableView = new TableView();
+    @FXML
+    TableColumn<Map, String> nameColumn;
+    @FXML
+    TableColumn<Map, String> descriptionColumn;
 
     private Stage stage;
     private Scene scene;
@@ -62,23 +74,38 @@ public class LoginController {
         url += "&simple=true";
         url += "&private_token=" + token;
         RestTemplate restTemplate = new RestTemplate();
-        System.out.println(restTemplate.getForObject(url, String.class));
-        // response = new JSONObject(restTemplate.getForObject(url, String.class));
         response = new JSONObject("{ repositories: " + restTemplate.getForObject(url, String.class) + "}");
         System.out.println(response);
 
         repositories = response.getJSONArray("repositories");
-        for (int i = 0; i<repositories.length(); i++) {
-            System.out.println(repositories.getJSONObject(i).getString("name"));
-            //todo: сформировать по массиву (?если таблица javafx принимает массив) на каждый столбец будущей таблицы репозиториев
+        // TableView tableView = new TableView();
+        nameColumn = new TableColumn<>("Название репозитория");
+        nameColumn.setCellValueFactory(new MapValueFactory<String>("name"));
+        descriptionColumn = new TableColumn<>("Описание");
+        descriptionColumn.setCellValueFactory(new MapValueFactory<String>("description"));
+        tableView.getColumns().add(nameColumn);
+        tableView.getColumns().add(descriptionColumn);
+        ObservableList<Map<String, Object>> items = FXCollections.observableArrayList(); //ObservableList<Map<String, Object>> items = FXCollections.<Map<String, Object>>observableArrayList();
+
+        // ArrayList<Map<String, String>> tableData = new ArrayList<>();
+        for (int i = 0; i < repositories.length(); i++) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("name", repositories.getJSONObject(i).get("name")==JSONObject.NULL ? "" : repositories.getJSONObject(i).getString("name"));
+            item.put("description", repositories.getJSONObject(i).get("description")==JSONObject.NULL ? "" : repositories.getJSONObject(i).getString("description"));
+            items.add(item);
+            // tableData.add(i, item);
         }
+        System.out.println("Мапы в таблицу: " + items);
+        tableView.getItems().addAll(String.valueOf(items));
+
 
         // переход к сцене таблицы репозиториев
         root = FXMLLoader.load(getClass().getResource("/fxml/RepositoryTable.fxml"));
         stage = (Stage) ((Node)event.getSource()).getScene().getWindow();
         scene = new Scene(root);
-        // stage.setScene(scene);
-        // stage.show();
+        stage.setScene(scene);
+        stage.show();
+        //todo: Добавить placeholder в таблицу, когда нет доступных репозиториев
     }
 
     /**
