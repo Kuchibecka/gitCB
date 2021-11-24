@@ -9,13 +9,13 @@ import javafx.fxml.Initializable;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.client.RestTemplate;
-import org.zeroturnaround.exec.ProcessExecutor;
-import org.zeroturnaround.exec.ProcessResult;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -26,8 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 //todo: Источник: http://tutorials.jenkov.com/javafx/tableview.html
@@ -123,7 +121,7 @@ public class LoginController implements Initializable {
      * Авторизация по считываемому токену и считывание списка репозиториев
      */
     @FXML
-    public void logging(ActionEvent event) throws IOException {
+    public void logging(ActionEvent event) {
         token = tokenField.getText();
         System.out.println("Got token: " + token);
 
@@ -137,21 +135,19 @@ public class LoginController implements Initializable {
                 + "&private_token="
                 + token;
         System.out.println("My map: " + repoMap);
+        nameList.getItems().removeAll(bufferRepo);
         nameList.getItems().addAll(request());
         System.out.println("I LOGGED IN " + nameList.getItems());
 
         // glpat-u_xNuwLFH-dW66uHigMz
         // переход к сцене таблицы репозиториев
-        /*root = FXMLLoader.load(getClass().getResource("/fxml/RepositoryTable.fxml"));
+        /*
+        root = FXMLLoader.load(getClass().getResource("/fxml/RepositoryTable.fxml"));
         stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
         scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
-        System.out.println("I CHANGED SCENE " + nameList.getItems());
-        System.out.println("I CHANGED SCENE " + token);
-        System.out.println("I CHANGED SCENE " + bufferRepo);*/
-
-        //todo: Добавить placeholder в таблицу, когда нет доступных репозиториев
+        */
     }
 
     /**
@@ -170,13 +166,14 @@ public class LoginController implements Initializable {
      * Клонирование репозитория в заданную директорию
      */
     @FXML
-    public void clone(ActionEvent event) throws IOException, InterruptedException, ExecutionException, TimeoutException {
+    public void clone(ActionEvent event) throws IOException {
         String command = "git clone https://gitlab-ci-token:" + token + "@" + repoUrl;
         String path = pathField.getText();
         ProcessBuilder builder = new ProcessBuilder(
                 "cmd.exe", "/c", "cd " + path + " && " + command);
         builder.redirectErrorStream(true);
         Process p = builder.start();
+        // todo: Добавить ли вывод командной строки в окно программы?
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
         String line;
         while (true) {
