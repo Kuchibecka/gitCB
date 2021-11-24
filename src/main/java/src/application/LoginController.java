@@ -1,5 +1,8 @@
 package src.application;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
@@ -16,6 +19,7 @@ import javafx.stage.Stage;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.web.client.RestTemplate;
+import src.application.Entity.Repository;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -57,19 +61,31 @@ public class LoginController implements Initializable {
     /**
      * @return Список репозиториев как результат API запроса
      */
-    public ArrayList<String> request() {
+    public ArrayList<String> request() throws JsonProcessingException {
         System.out.println("____________________");
         System.out.println(token);
         System.out.println("____________________");
         ArrayList<String> bufferRepo = new ArrayList<>();
+        Map<Repository, String> repositoryMap = new HashMap<>();
         url = "https://gitlab.com/api/v4/projects/"
                 + "?membership=true"
                 + "&simple=true"
                 + "&private_token="
                 + token;
         RestTemplate restTemplate = new RestTemplate();
-        JSONObject response = new JSONObject("{ repositories: " + restTemplate.getForObject(url, String.class) + "}");
+
+        // todo: ??? Убрать для Jackson? Оставить вхоодным параметром String?
+        String json = restTemplate.getForObject(url, String.class);
+        JSONObject response = new JSONObject("{ repositories: " + json + "}");
         JSONArray repositories = response.getJSONArray("repositories");
+
+        // jackson
+        ObjectMapper mapper = new ObjectMapper();
+        TypeReference<HashMap<Repository, String>> typeRef =
+                new TypeReference<HashMap<Repository, String>>() {};
+        repositoryMap = mapper.readValue("{" + json + "}", typeRef);
+        System.out.println("My brand new repository map: " + repositoryMap.toString());
+
         for (int i = 0; i < repositories.length(); i++) {
             String name = repositories.getJSONObject(i).get("name") == JSONObject.NULL ?
                     ""
@@ -81,6 +97,7 @@ public class LoginController implements Initializable {
             repoMap.put(name, repoUrl);
             bufferRepo.add(name);
         }
+
         System.out.println("My map: " + repoMap);
         this.bufferRepo = bufferRepo;
         return bufferRepo;
@@ -103,7 +120,7 @@ public class LoginController implements Initializable {
      * Функция обновления списка репозиториев
      */
     @FXML
-    public void update() {
+    public void update() throws JsonProcessingException {
         nameList.getItems().removeAll(bufferRepo);
         nameList.getItems().addAll(request());
     }
@@ -113,7 +130,7 @@ public class LoginController implements Initializable {
      * Авторизация по считываемому токену и считывание списка репозиториев
      */
     @FXML
-    public void logging() {
+    public void logging() throws JsonProcessingException {
         token = tokenField.getText();
         // todo+: Сохранять токены в файле, чтобы не вводить заново
         // todo: Обработка исключения несоответствия токена
