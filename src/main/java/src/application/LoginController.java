@@ -28,42 +28,35 @@ import java.util.ResourceBundle;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
-//todo: Источник: http://tutorials.jenkov.com/javafx/tableview.html
+/**
+ * ТОКЕН ДЛЯ АВТОРИЗАЦИИ: glpat-u_xNuwLFH-dW66uHigMz
+ * ТЕСТОВЫЙ ПУТЬ КЛОНИРОВАНИЯ: C:\Users\Администратор\Downloads\testFolder
+ */
+// todo: Добавить обработку всех ошибок
 public class LoginController implements Initializable {
-    private Stage stage;
-    private Scene scene;
-    private Parent root;
-
-    private String token;
-    JSONObject response;
-    JSONArray repositories;
-
     @FXML
     private TextField tokenField;
-
     @FXML
     private TextField pathField;
-
-    @FXML
+    /*@FXML
     private Button cloneButton;
-
     @FXML
     private Button logIn;
-
     @FXML
-    private Button updateButton;
-
+    private Button updateButton;*/
     @FXML
     private ListView<String> nameList = new ListView();
 
     private ArrayList<String> bufferRepo = new ArrayList<>();
-
     private String url;
-
+    private String token;
     private String repoUrl;
-
     private Map<String, String> repoMap = new HashMap<>();
 
+
+    /**
+     * @return Список репозиториев как результат API запроса
+     */
     public ArrayList<String> request() {
         System.out.println("____________________");
         System.out.println(token);
@@ -75,10 +68,8 @@ public class LoginController implements Initializable {
                 + "&private_token="
                 + token;
         RestTemplate restTemplate = new RestTemplate();
-        response = new JSONObject("{ repositories: " + restTemplate.getForObject(url, String.class) + "}");
-        repositories = response.getJSONArray("repositories");
-        System.out.println(response);
-
+        JSONObject response = new JSONObject("{ repositories: " + restTemplate.getForObject(url, String.class) + "}");
+        JSONArray repositories = response.getJSONArray("repositories");
         for (int i = 0; i < repositories.length(); i++) {
             String name = repositories.getJSONObject(i).get("name") == JSONObject.NULL ?
                     ""
@@ -97,10 +88,9 @@ public class LoginController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        System.out.println("INITIALIZE");
-        System.out.println(token);
-
         nameList.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<String>() {
+            // Функция отлавливания изменений поля nameList (извлечение url выбранного репозитория)
+            // todo: Сделать что-то, если пользователь ничего не выбрал (заблокировать кнопку, к примеру)
             @Override
             public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
                 repoUrl = repoMap.get(nameList.getSelectionModel().getSelectedItem());
@@ -109,9 +99,11 @@ public class LoginController implements Initializable {
         });
     }
 
+    /**
+     * Функция обновления списка репозиториев
+     */
     @FXML
-    public void update(ActionEvent event) {
-        System.out.println(bufferRepo);
+    public void update() {
         nameList.getItems().removeAll(bufferRepo);
         nameList.getItems().addAll(request());
     }
@@ -121,26 +113,24 @@ public class LoginController implements Initializable {
      * Авторизация по считываемому токену и считывание списка репозиториев
      */
     @FXML
-    public void logging(ActionEvent event) {
+    public void logging() {
         token = tokenField.getText();
-        System.out.println("Got token: " + token);
-
-        // todo++: Сохранять токены в файле, чтобы не вводить заново
+        // todo+: Сохранять токены в файле, чтобы не вводить заново
         // todo: Обработка исключения несоответствия токена
-        // todo: Убрать, уже считывается из формы (вроде):
         // token = "glpat-u_xNuwLFH-dW66uHigMz";
+        // todo: Ввод url из
+        // todo: log4j
+        // todo: Обработка exception'ов
+        // todo: ошибки соединения, ошибки полей, выгрузка
+        // todo: сериализация билиотека json -> Jackson
         url = "https://gitlab.com/api/v4/projects/"
                 + "?membership=true"
                 + "&simple=true"
                 + "&private_token="
                 + token;
-        System.out.println("My map: " + repoMap);
         nameList.getItems().removeAll(bufferRepo);
         nameList.getItems().addAll(request());
-        System.out.println("I LOGGED IN " + nameList.getItems());
-
-        // glpat-u_xNuwLFH-dW66uHigMz
-        // переход к сцене таблицы репозиториев
+        // Переход к сцене таблицы репозиториев
         /*
         root = FXMLLoader.load(getClass().getResource("/fxml/RepositoryTable.fxml"));
         stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -155,9 +145,9 @@ public class LoginController implements Initializable {
      */
     @FXML
     public void getBackToLogin(ActionEvent event) throws IOException {
-        root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
-        stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        scene = new Scene(root);
+        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
+        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+        Scene scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
     }
@@ -173,12 +163,15 @@ public class LoginController implements Initializable {
                 "cmd.exe", "/c", "cd " + path + " && " + command);
         builder.redirectErrorStream(true);
         Process p = builder.start();
-        // todo: Добавить ли вывод командной строки в окно программы?
+        // todo: Добавлять ли вывод командной строки в окно программы?
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
         String line;
         while (true) {
             line = r.readLine();
-            if (line == null) { break; }
+            if (line == null) {
+                break;
+            }
+            // Вывод командной строки
             System.out.println(line);
         }
     }
