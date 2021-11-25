@@ -19,6 +19,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.Repository;
+import src.application.Entity.RepositoryContainer;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -34,36 +35,33 @@ import java.util.*;
 public class LoginController implements Initializable {
     private ArrayList<String> bufferRepo = new ArrayList<>();
     // todo: Field can be converted to a local variable in method request()
+    // todo: url, token перенести в класс RepositoryContainer???
     private String url;
-    private String token;
-    private String repoUrl;
+    private String curRepoUrl;
     private String curProtocol;
-    private String curDomain;
+    private RepositoryContainer repositories = new RepositoryContainer();
+    // todo: Заменить repoMap на что-то с классом RepositoryContainer
     private Map<String, String> repoMap = new HashMap<>();
     private final ObservableList<String> protocols = FXCollections.observableArrayList("http://", "https://");
-    private final ObservableList<String> domains = FXCollections.observableArrayList("gitlab.com", "gitlab.dev.ppod.cbr.ru");
 
     @FXML
     private TextField tokenField;
     @FXML
-    private TextField urlField;
-    @FXML
     private TextField pathField;
+    @FXML
+    private TextField domainField;
     // todo: убрать  = new ListView() ??
     // todo: !никогда не используйте new для создания присвоения значения членам с тегом @FXML! (https://coderoad.ru/23067256/Заполнить-Choicebox-определенный-в-FXML#23068017)
     @FXML
     private ListView<String> nameList = new ListView();
     @FXML
     private ChoiceBox<String> protocolChoice;
-    @FXML
-    private ChoiceBox<String> domainChoice;
     /*@FXML
     private Button cloneButton;
     @FXML
     private Button logIn;
     @FXML
     private Button updateButton;*/
-
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -72,14 +70,17 @@ public class LoginController implements Initializable {
             // todo: Сделать что-то, если пользователь ничего не выбрал (заблокировать кнопку, к примеру)
             @Override
             public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-                repoUrl = repoMap.get(nameList.getSelectionModel().getSelectedItem()).substring(8);
-                System.out.println(repoUrl);
+                curRepoUrl = repositories
+                        .getRepoMap()
+                        .get(
+                                nameList.getSelectionModel().getSelectedItem()
+                        )
+                        .getRepoUrl();
+                System.out.println(curRepoUrl);
             }
         });
         protocolChoice.getItems().setAll(protocols);
-        domainChoice.getItems().setAll(domains);
         protocolChoice.setOnAction(event -> curProtocol = protocolChoice.getValue());
-        domainChoice.setOnAction(event -> curDomain = domainChoice.getValue());
     }
 
     /**
@@ -87,16 +88,17 @@ public class LoginController implements Initializable {
      */
     public ArrayList<String> request() throws JsonProcessingException {
         System.out.println("____________________");
-        System.out.println(token);
+        System.out.println(this.repositories.getToken());
         System.out.println("____________________");
         ArrayList<String> bufferRepo = new ArrayList<>();
+        String curDomain = domainField.getText();
         url = curProtocol
                 + curDomain
                 + "/api/v4/projects/"
                 + "?membership=true"
                 + "&simple=true"
                 + "&private_token="
-                + token;
+                + this.repositories.getToken();
         System.out.println("Created url for request: " + url);
         RestTemplate restTemplate = new RestTemplate();
 
@@ -104,18 +106,13 @@ public class LoginController implements Initializable {
         System.out.println("Input json: " + json);
         // glpat-u_xNuwLFH-dW66uHigMz
         ObjectMapper mapper = new ObjectMapper();
+        /*this.repositories = */
+        List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
+        for (Repository repo : repos)
+            this.repositories.addRepoMap(repo.getRepoName(), repo);
 
-        List<Repository> repository = Arrays.asList(mapper.readValue(json, Repository[].class));
-        for (Repository repo : repository) {
-            bufferRepo.add(repo.getName());
-            repoMap.put(
-                    repo.getName(),
-                    repo.getRepoUrl()
-            );
-        }
-
-        /*Repository[] list = mapper.readValue(json, Repository[].class);
-        for (Repository rep : list) {
+        /*RepositoryContainer[] list = mapper.readValue(json, RepositoryContainer[].class);
+        for (RepositoryContainer rep : list) {
             bufferRepo.add(rep.getName());
             repoMap.put(
                     rep.getName(),
@@ -123,7 +120,6 @@ public class LoginController implements Initializable {
             );
         }*/
 
-        System.out.println("My map: " + repoMap);
         this.bufferRepo = bufferRepo;
         return bufferRepo;
     }
@@ -143,11 +139,13 @@ public class LoginController implements Initializable {
      */
     @FXML
     public void logging() throws JsonProcessingException {
-        token = tokenField.getText();
+        this.repositories.setToken(tokenField.getText());
+        System.out.println("GOT TOKEN: " + this.repositories.getToken());
+
         /*url = urlField.getText();*/
         // token = "glpat-u_xNuwLFH-dW66uHigMz";
 
-        /*  todo: 1) Ввод url из текстового поля
+        /*  todo: 1) Избавиться от map, работать с классом RepositoryContainer
             todo: 2) log4j
             todo: 3) Обработка exception'ов:
                     - ошибки соединения
@@ -156,8 +154,15 @@ public class LoginController implements Initializable {
                     - несоответствие токена
         */
         /*url = "https://gitlab.com/api/v4/projects/"*/
-        nameList.getItems().removeAll(bufferRepo);
-        nameList.getItems().addAll(request());
+
+        request();
+        ArrayList<String> a = (ArrayList<String>) this.repositories.getRepoMap().keySet();
+        nameList.getItems().addAll(a); // <- тут должен быть ArrayList<String>
+        boolean b = false;
+        if (b)
+            nameList.setItems(FXCollections.observableArrayList());
+        b = true;
+
         // Переход к сцене таблицы репозиториев
         /*
         root = FXMLLoader.load(getClass().getResource("/fxml/RepositoryTable.fxml"));
@@ -187,7 +192,7 @@ public class LoginController implements Initializable {
     public void clone(ActionEvent event) throws IOException {
         // http://gitlab.dev.ppod.cbr.ru/
         // todo: Куда ^тут^ стучаться чтобы сделать git clone?
-        String command = "git clone https://gitlab-ci-token:" + token + "@" + repoUrl;
+        String command = "git clone https://gitlab-ci-token:" + this.repositories.getToken() + "@" + curRepoUrl;
         System.out.println("Command is: " + command);
         String path = pathField.getText();
         ProcessBuilder builder = new ProcessBuilder(
