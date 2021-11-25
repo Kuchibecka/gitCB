@@ -2,6 +2,7 @@ package src.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -25,10 +26,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.ResourceBundle;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -40,6 +38,8 @@ import java.util.concurrent.TimeoutException;
 public class LoginController implements Initializable {
     @FXML
     private TextField tokenField;
+    @FXML
+    private TextField urlField;
     @FXML
     private TextField pathField;
     /*@FXML
@@ -66,37 +66,37 @@ public class LoginController implements Initializable {
         System.out.println(token);
         System.out.println("____________________");
         ArrayList<String> bufferRepo = new ArrayList<>();
-        Map<Repository, String> repositoryMap = new HashMap<>();
-        url = "https://gitlab.com/api/v4/projects/"
+        url = "https://"
+                + urlField.getText()
+                + "/api/v4/projects/"
                 + "?membership=true"
                 + "&simple=true"
                 + "&private_token="
                 + token;
         RestTemplate restTemplate = new RestTemplate();
 
-        // todo: ??? Убрать для Jackson? Оставить вхоодным параметром String?
         String json = restTemplate.getForObject(url, String.class);
-        JSONObject response = new JSONObject("{ repositories: " + json + "}");
-        JSONArray repositories = response.getJSONArray("repositories");
-
-        // jackson
+        System.out.println("Input json: " + json);
+        // glpat-u_xNuwLFH-dW66uHigMz
         ObjectMapper mapper = new ObjectMapper();
-        TypeReference<HashMap<Repository, String>> typeRef =
-                new TypeReference<HashMap<Repository, String>>() {};
-        repositoryMap = mapper.readValue("{" + json + "}", typeRef);
-        System.out.println("My brand new repository map: " + repositoryMap.toString());
 
-        for (int i = 0; i < repositories.length(); i++) {
-            String name = repositories.getJSONObject(i).get("name") == JSONObject.NULL ?
-                    ""
-                    : repositories.getJSONObject(i).getString("name");
-            String repoUrl = repositories.getJSONObject(i).get("http_url_to_repo") == JSONObject.NULL ?
-                    ""
-                    : repositories.getJSONObject(i).getString("http_url_to_repo");
-            repoUrl = repoUrl.substring(8);
-            repoMap.put(name, repoUrl);
-            bufferRepo.add(name);
+        List<Repository> repository = Arrays.asList(mapper.readValue(json, Repository[].class));
+        for (Repository repo : repository) {
+            bufferRepo.add(repo.getName());
+            repoMap.put(
+                    repo.getName(),
+                    repo.getRepoUrl()
+            );
         }
+
+        /*Repository[] list = mapper.readValue(json, Repository[].class);
+        for (Repository rep : list) {
+            bufferRepo.add(rep.getName());
+            repoMap.put(
+                    rep.getName(),
+                    rep.getRepoUrl()
+            );
+        }*/
 
         System.out.println("My map: " + repoMap);
         this.bufferRepo = bufferRepo;
@@ -110,7 +110,7 @@ public class LoginController implements Initializable {
             // todo: Сделать что-то, если пользователь ничего не выбрал (заблокировать кнопку, к примеру)
             @Override
             public void changed(ObservableValue<? extends String> arg0, String arg1, String arg2) {
-                repoUrl = repoMap.get(nameList.getSelectionModel().getSelectedItem());
+                repoUrl = repoMap.get(nameList.getSelectionModel().getSelectedItem()).substring(8);
                 System.out.println(repoUrl);
             }
         });
@@ -132,19 +132,26 @@ public class LoginController implements Initializable {
     @FXML
     public void logging() throws JsonProcessingException {
         token = tokenField.getText();
-        // todo+: Сохранять токены в файле, чтобы не вводить заново
-        // todo: Обработка исключения несоответствия токена
+        /*url = urlField.getText();*/
         // token = "glpat-u_xNuwLFH-dW66uHigMz";
-        // todo: Ввод url из
-        // todo: log4j
-        // todo: Обработка exception'ов
-        // todo: ошибки соединения, ошибки полей, выгрузка
-        // todo: сериализация билиотека json -> Jackson
-        url = "https://gitlab.com/api/v4/projects/"
+
+        /*  todo: 1) Ввод url из текстового поля
+            todo: 2) log4j
+            todo: 3) Обработка exception'ов:
+                    - ошибки соединения
+                    - ошибки полей
+                    - ошибки выгрузки
+                    - несоответствие токена
+        */
+        
+        /*url = "https://gitlab.com/api/v4/projects/"*/
+        /*url = "https://"
+                + url
+                + "/api/v4/projects/"
                 + "?membership=true"
                 + "&simple=true"
                 + "&private_token="
-                + token;
+                + token;*/
         nameList.getItems().removeAll(bufferRepo);
         nameList.getItems().addAll(request());
         // Переход к сцене таблицы репозиториев
@@ -174,13 +181,15 @@ public class LoginController implements Initializable {
      */
     @FXML
     public void clone(ActionEvent event) throws IOException {
+        // http://gitlab.dev.ppod.cbr.ru/
+        // todo: Куда ^тут^ стучаться чтобы сделать git clone?
         String command = "git clone https://gitlab-ci-token:" + token + "@" + repoUrl;
+        System.out.println("Command is: " + command);
         String path = pathField.getText();
         ProcessBuilder builder = new ProcessBuilder(
                 "cmd.exe", "/c", "cd " + path + " && " + command);
         builder.redirectErrorStream(true);
         Process p = builder.start();
-        // todo: Добавлять ли вывод командной строки в окно программы?
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
         String line;
         while (true) {
