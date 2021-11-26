@@ -18,6 +18,7 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
@@ -81,25 +82,45 @@ public class LoginController implements Initializable {
             cloneButton.setDisable(false);
             rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
-        protocolChoice.getItems().setAll(protocols);
+        try {
+            if (protocols.isEmpty())
+                throw new Exception("Variable protocols not configured");
+            protocolChoice.getItems().setAll(protocols);
+        } catch (Exception e) {
+            rootLogger.error(e.getMessage());
+            return;
+        }
         protocolChoice.setOnAction(event -> curProtocol = protocolChoice.getValue());
     }
 
     /**
      * Сцена отображения и сцена авторизации!
      * Получает список репозиториев как результат API запроса и записывает в this.repositories.repoMap
-     *
-     * @ return void todo: Исправить на boolean (ошибка/успех)
      */
-    public void request(String url) throws JsonProcessingException {
+    public void request(String url) {
         rootLogger.info("Calling request(" + url + ")");
+        try {
+            assert url != null;
+        } catch (AssertionError e) {
+            rootLogger.error("URL must not be null");
+            return;
+        }
         RestTemplate restTemplate = new RestTemplate();
-        String json = restTemplate.getForObject(url, String.class);
-        rootLogger.debug("JSON in request(): " + json);
-        ObjectMapper mapper = new ObjectMapper();
-        List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
-        for (Repository repo : repos)
-            this.repositories.addRepoMap(repo.getRepoName(), repo);
+        try {
+            System.out.println(url);
+            String json = restTemplate.getForObject(url, String.class);
+            if (json == null || json.isEmpty()) {
+                throw new Exception("Protocol not specified");
+            }
+            rootLogger.debug("JSON in request(): " + json);
+            ObjectMapper mapper = new ObjectMapper();
+            List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
+            for (Repository repo : repos)
+                this.repositories.addRepoMap(repo.getRepoName(), repo);
+        } catch (Exception e) {
+            rootLogger.error(e.getMessage());
+            return;
+        }
         repoContainerLogger.info("Request result in this.repositories: " + this.repositories.toString());
     }
 
@@ -108,7 +129,7 @@ public class LoginController implements Initializable {
      * Функция обновления списка репозиториев
      */
     @FXML
-    public void update() throws JsonProcessingException {
+    public void update() {
         rootLogger.info("Calling update()");
         request(this.repositories.getRequestUrl());
         nameList.setItems(FXCollections.observableArrayList());
@@ -125,18 +146,26 @@ public class LoginController implements Initializable {
      * Авторизация по считываемому токену и отображение списка репозиториев
      */
     @FXML
-    public void authorization() throws JsonProcessingException {
+    public void authorization() {
         rootLogger.info("Calling authorization()");
         this.repositories.setToken(tokenField.getText());
-        this.repositories.setRequestUrl(
-                curProtocol
-                        + domainField.getText()
-                        + "/api/v4/projects/"
-                        + "?membership=true"
-                        + "&simple=true"
-                        + "&private_token="
-                        + this.repositories.getToken()
-        );
+        try {
+            if (curProtocol == null || curProtocol.isEmpty()) {
+                throw new Exception("Wrong protocol specification");
+            }
+            this.repositories.setRequestUrl(
+                    curProtocol
+                            + domainField.getText()
+                            + "/api/v4/projects/"
+                            + "?membership=true"
+                            + "&simple=true"
+                            + "&private_token="
+                            + this.repositories.getToken()
+            );
+        } catch (Exception e) {
+            rootLogger.error(e.getMessage());
+            return;
+        }
         rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
         update();
 
@@ -176,23 +205,34 @@ public class LoginController implements Initializable {
         String command = "git clone https://gitlab-ci-token:"
                 + this.repositories.getToken() + "@" + curRepoUrl;
         rootLogger.debug("Command for ProcessBuilder is: " + command);
-        String path = pathField.getText();
-        rootLogger.debug("Path for ProcessBuilder is: " + path);
-        String pbCommand = "cd " + path + " && " + command;
-        rootLogger.debug("Full command for ProcessBuilder is: " + pbCommand);
-        ProcessBuilder builder = new ProcessBuilder(
-                "cmd.exe", "/c", pbCommand);
+        String pbCommand = null;
+        try {
+            String path = pathField.getText();
+            assert path != null;
+            rootLogger.debug("Path for ProcessBuilder is: " + path);
+            pbCommand = "cd " + path + " && " + command;
+            rootLogger.debug("Full command for ProcessBuilder is: " + pbCommand);
+        } catch (AssertionError e) {
+            rootLogger.error("Variable path is null");
+            return;
+        }
+        ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", pbCommand);
         builder.redirectErrorStream(true);
-        Process p = builder.start();
-        BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        String line;
-        while (true) {
-            line = r.readLine();
-            if (line == null) {
-                break;
+        try {
+            Process p = builder.start();
+            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String line;
+            while (true) {
+                line = r.readLine();
+                if (line == null) {
+                    break;
+                }
+                // Вывод командной строки
+                rootLogger.debug("Trace from ProcessBuilder: " + line);
             }
-            // Вывод командной строки
-            rootLogger.debug("Trace from ProcessBuilder: " + line);
+        } catch (IOException e) {
+            rootLogger.error(e.getMessage());
+            return;
         }
         rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
     }
