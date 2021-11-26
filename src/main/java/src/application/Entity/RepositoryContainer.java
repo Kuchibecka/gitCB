@@ -1,13 +1,11 @@
 package src.application.Entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import java.util.HashMap;
 
-@JsonIgnoreProperties(ignoreUnknown = true)
 public class RepositoryContainer {
     private String token;
     private HashMap<String, Repository> repoMap = new HashMap<>();
+    private String requestUrl;
 
     public RepositoryContainer(String token, HashMap<String, Repository> repoMap) {
         this.token = token;
@@ -31,6 +29,14 @@ public class RepositoryContainer {
 
     public void setRepoMap(HashMap<String, Repository> repoMap) {
         this.repoMap = repoMap;
+    }
+
+    public String getRequestUrl() {
+        return requestUrl;
+    }
+
+    public void setRequestUrl(String requestUrl) {
+        this.requestUrl = requestUrl;
     }
 
     public void addRepoMap(String name, Repository repo) {
