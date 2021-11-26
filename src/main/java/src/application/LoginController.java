@@ -2,8 +2,6 @@ package src.application;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -18,6 +16,8 @@ import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
@@ -26,8 +26,10 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.ResourceBundle;
 
 /**
  * ТОКЕН ДЛЯ АВТОРИЗАЦИИ: glpat-u_xNuwLFH-dW66uHigMz
@@ -49,7 +51,6 @@ public class LoginController implements Initializable {
     private ListView<String> nameList;
     @FXML
     private ChoiceBox<String> protocolChoice;
-
     @FXML
     public Button logIn;
     @FXML
@@ -59,12 +60,17 @@ public class LoginController implements Initializable {
     @FXML
     private Button updateButton;
 
+    static final Logger rootLogger = LogManager.getRootLogger();
+    static final Logger repoContainerLogger = LogManager.getLogger(RepositoryContainer.class);
+
     /**
      * Сцена отображения
      * Функция начальной инициализации сцены
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        rootLogger.info("Initialization");
+        rootLogger.debug("Root Logger debug message!");
         cloneButton.setDisable(true);
         nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
             curRepoUrl = repositories
@@ -73,7 +79,7 @@ public class LoginController implements Initializable {
                     .getRepoUrl()
                     .substring(8);
             cloneButton.setDisable(false);
-            System.out.println("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
+            rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
         protocolChoice.getItems().setAll(protocols);
         protocolChoice.setOnAction(event -> curProtocol = protocolChoice.getValue());
@@ -86,14 +92,15 @@ public class LoginController implements Initializable {
      * @ return void todo: Исправить на boolean (ошибка/успех)
      */
     public void request(String url) throws JsonProcessingException {
+        rootLogger.info("Calling request(" + url + ")");
         RestTemplate restTemplate = new RestTemplate();
         String json = restTemplate.getForObject(url, String.class);
-        System.out.println("Input json: " + json);
+        rootLogger.debug("JSON in request(): " + json);
         ObjectMapper mapper = new ObjectMapper();
         List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
         for (Repository repo : repos)
             this.repositories.addRepoMap(repo.getRepoName(), repo);
-        System.out.println("Repo map in this.repositories: " + this.repositories.getRepoMap());
+        repoContainerLogger.info("Request result in this.repositories: " + this.repositories.toString());
     }
 
     /**
@@ -102,6 +109,7 @@ public class LoginController implements Initializable {
      */
     @FXML
     public void update() throws JsonProcessingException {
+        rootLogger.info("Calling update()");
         request(this.repositories.getRequestUrl());
         nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
@@ -109,6 +117,7 @@ public class LoginController implements Initializable {
                         this.repositories.getRepoMap().keySet()
                 )
         );
+        rootLogger.info("Result of update(), nameList: " + nameList.toString());
     }
 
     /**
@@ -116,7 +125,8 @@ public class LoginController implements Initializable {
      * Авторизация по считываемому токену и отображение списка репозиториев
      */
     @FXML
-    public void logging() throws JsonProcessingException {
+    public void authorization() throws JsonProcessingException {
+        rootLogger.info("Calling authorization()");
         this.repositories.setToken(tokenField.getText());
         this.repositories.setRequestUrl(
                 curProtocol
@@ -127,7 +137,7 @@ public class LoginController implements Initializable {
                         + "&private_token="
                         + this.repositories.getToken()
         );
-        System.out.println("Created url for request: " + this.repositories.getRequestUrl());
+        rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
         update();
 
         // Переход к сцене таблицы репозиториев
@@ -138,6 +148,7 @@ public class LoginController implements Initializable {
         stage.setScene(scene);
         stage.show();
         */
+        rootLogger.info("Result of authorization(): called update");
     }
 
     /**
@@ -159,14 +170,18 @@ public class LoginController implements Initializable {
      */
     @FXML
     public void cloneRepo(ActionEvent event) throws IOException {
+        rootLogger.info("Calling cloneRepo()");
         // http://gitlab.dev.ppod.cbr.ru/
         // todo: Куда ^тут^ стучаться чтобы сделать git clone?
         String command = "git clone https://gitlab-ci-token:"
                 + this.repositories.getToken() + "@" + curRepoUrl;
-        System.out.println("Command is: " + command);
+        rootLogger.debug("Command for ProcessBuilder is: " + command);
         String path = pathField.getText();
+        rootLogger.debug("Path for ProcessBuilder is: " + path);
+        String pbCommand = "cd " + path + " && " + command;
+        rootLogger.debug("Full command for ProcessBuilder is: " + pbCommand);
         ProcessBuilder builder = new ProcessBuilder(
-                "cmd.exe", "/c", "cd " + path + " && " + command);
+                "cmd.exe", "/c", pbCommand);
         builder.redirectErrorStream(true);
         Process p = builder.start();
         BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -177,7 +192,8 @@ public class LoginController implements Initializable {
                 break;
             }
             // Вывод командной строки
-            System.out.println(line);
+            rootLogger.debug("Trace from ProcessBuilder: " + line);
         }
+        rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
     }
 }

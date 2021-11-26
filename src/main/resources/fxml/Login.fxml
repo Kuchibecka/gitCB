@@ -4,9 +4,10 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="src.application.LoginController">
-   <children>
-      <Button fx:id="logIn" layoutX="275.0" layoutY="209.0" mnemonicParsing="false" onAction="#logging" text="Log In" />
-      <TextField fx:id="tokenField" layoutX="226.0" layoutY="168.0" promptText="your token" />
-   </children>
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
+            prefWidth="600.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="src.application.LoginController">
+   <Button fx:id="backToLogin" layoutX="275.0" layoutY="209.0" mnemonicParsing="false" onAction="#authorization"
+           text="Log In"/>
+   <TextField fx:id="tokenField" layoutX="226.0" layoutY="168.0" promptText="your token"/>
 </AnchorPane>

@@ -42,4 +42,13 @@ public class RepositoryContainer {
     public void addRepoMap(String name, Repository repo) {
         this.repoMap.put(name, repo);
     }
+
+    @Override
+    public String toString() {
+        return "RepositoryContainer{" +
+                "token='" + token + '\'' +
+                ", repoMap=" + repoMap +
+                ", requestUrl='" + requestUrl + '\'' +
+                '}';
+    }
 }
