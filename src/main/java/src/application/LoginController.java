@@ -74,14 +74,12 @@ public class LoginController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         rootLogger.info("Initialization");
         rootLogger.debug("Root Logger debug message!");
-        cloneButton.setDisable(true);
         nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
             curRepoUrl = repositories
                     .getRepoMap()
                     .get(nameList.getSelectionModel().getSelectedItem())
                     .getRepoUrl()
                     .substring(8);
-            cloneButton.setDisable(false);
             rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
         try {
@@ -126,7 +124,7 @@ public class LoginController implements Initializable {
         } catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
-                errorLabel.setText("Токен не обладает нужными правами\nТребуется доступ к API");
+                errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
             else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found") || e.getMessage().contains("I/O error"))
                 errorLabel.setText("Неверный домен");
             else if (e.getMessage().equals("Protocol not specified"))
@@ -260,7 +258,7 @@ public class LoginController implements Initializable {
         } catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().equals("Cloning repository not specified"))
-                errorLabel2.setText("Репозиторий для клонирования не указан");
+                errorLabel2.setText("Репозиторий для клонирования не выбран");
             if (e.getMessage().equals("Path not specified"))
                 errorLabel2.setText("Путь клонирования не указан");
             return;

@@ -8,14 +8,15 @@
 <?import javafx.scene.layout.AnchorPane?>
 
 <AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="533.0" prefWidth="851.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="src.application.LoginController">
-    <Button fx:id="backToLogin" layoutX="42.0" layoutY="206.0" mnemonicParsing="false" onAction="#getBackToLogin" prefHeight="23.0" prefWidth="41.0" text="back" textAlignment="CENTER" />
-    <ListView fx:id="nameList" layoutX="98.0" layoutY="256.0" prefHeight="200.0" prefWidth="200.0" />
-    <Button fx:id="updateButton" layoutX="312.0" layoutY="206.0" mnemonicParsing="false" onAction="#update" text="update" />
-    <TextField fx:id="pathField" layoutX="98.0" layoutY="231.0" prefHeight="25.0" prefWidth="154.0" />
-    <Button fx:id="cloneButton" layoutX="252.0" layoutY="231.0" mnemonicParsing="false" onAction="#cloneRepo" prefHeight="25.0" prefWidth="48.0" text="clone" />
-    <TextField fx:id="tokenField" layoutX="74.0" layoutY="100.0" prefHeight="25.0" prefWidth="200.0" promptText="your token" text="glpat-u_xNuwLFH-dW66uHigMz" />
-    <Button fx:id="logIn" layoutX="272.0" layoutY="100.0" mnemonicParsing="false" onAction="#authorization" text="Log In" />
-    <ChoiceBox fx:id="protocolChoice" layoutX="75.0" layoutY="65.0" prefHeight="25.0" prefWidth="71.0" />
-    <TextField fx:id="domainField" layoutX="146.0" layoutY="65.0" prefHeight="25.0" prefWidth="175.0" promptText="git domain" text="gitlab.com" />
-   <Label fx:id="errorLabel" layoutX="75.0" layoutY="14.0" prefHeight="43.0" prefWidth="246.0" textAlignment="CENTER" textFill="RED" />
+    <Button fx:id="backToLogin" layoutX="42.0" layoutY="256.0" mnemonicParsing="false" onAction="#getBackToLogin" prefHeight="23.0" prefWidth="41.0" text="back" textAlignment="CENTER" />
+    <ListView fx:id="nameList" layoutX="98.0" layoutY="306.0" prefHeight="200.0" prefWidth="200.0" />
+    <Button fx:id="updateButton" layoutX="312.0" layoutY="256.0" mnemonicParsing="false" onAction="#update" text="update" />
+    <TextField fx:id="pathField" layoutX="98.0" layoutY="281.0" prefHeight="25.0" prefWidth="154.0" />
+    <Button fx:id="cloneButton" layoutX="252.0" layoutY="281.0" mnemonicParsing="false" onAction="#cloneRepo" prefHeight="25.0" prefWidth="48.0" text="clone" />
+    <TextField fx:id="tokenField" layoutX="74.0" layoutY="150.0" prefHeight="25.0" prefWidth="200.0" promptText="your token" text="glpat-u_xNuwLFH-dW66uHigMz" />
+    <Button fx:id="logIn" layoutX="272.0" layoutY="150.0" mnemonicParsing="false" onAction="#authorization" text="Log In" />
+    <ChoiceBox fx:id="protocolChoice" layoutX="75.0" layoutY="115.0" prefHeight="25.0" prefWidth="71.0" />
+    <TextField fx:id="domainField" layoutX="146.0" layoutY="115.0" prefHeight="25.0" prefWidth="175.0" promptText="git domain" text="gitlab.com" />
+   <Label fx:id="errorLabel" layoutX="75.0" layoutY="14.0" prefHeight="75.0" prefWidth="246.0" textAlignment="CENTER" textFill="RED" />
+   <Label fx:id="errorLabel2" layoutX="75.0" layoutY="207.0" prefHeight="43.0" prefWidth="246.0" textAlignment="CENTER" textFill="RED" />
 </AnchorPane>
