@@ -1,13 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-            prefWidth="600.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="src.application.LoginController">
-   <Button fx:id="backToLogin" layoutX="275.0" layoutY="209.0" mnemonicParsing="false" onAction="#authorization"
-           text="Log In"/>
-   <TextField fx:id="tokenField" layoutX="226.0" layoutY="168.0" promptText="your token"/>
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="src.application.LoginController">
+   <children>
+      <TextField fx:id="tokenField" layoutX="176.0" layoutY="195.0" prefHeight="25.0" prefWidth="200.0" promptText="your token" text="glpat-u_xNuwLFH-dW66uHigMz" />
+      <Button fx:id="logIn" layoutX="374.0" layoutY="195.0" mnemonicParsing="false" onAction="#authorization" text="Log In" />
+      <ChoiceBox fx:id="protocolChoice" layoutX="177.0" layoutY="160.0" prefHeight="25.0" prefWidth="71.0" />
+      <TextField fx:id="domainField" layoutX="248.0" layoutY="160.0" prefHeight="25.0" prefWidth="175.0" promptText="git domain" text="gitlab.com" />
+      <Label fx:id="errorLabel" layoutX="177.0" layoutY="85.0" prefHeight="75.0" prefWidth="246.0" textAlignment="CENTER" textFill="RED" />
+   </children>
 </AnchorPane>

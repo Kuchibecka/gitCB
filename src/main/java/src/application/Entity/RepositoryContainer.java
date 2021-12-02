@@ -46,9 +46,9 @@ public class RepositoryContainer {
     @Override
     public String toString() {
         return "RepositoryContainer{" +
-                "token='" + token + '\'' +
-                ", repoMap=" + repoMap +
-                ", requestUrl='" + requestUrl + '\'' +
+                "token='" + token + '\'' + ",\n" +
+                "requestUrl='" + requestUrl + '\'' + ",\n" +
+                "repoMap=" + repoMap.toString() +
                 '}';
     }
 }

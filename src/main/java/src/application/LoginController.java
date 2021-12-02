@@ -1,6 +1,5 @@
 package src.application;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -15,7 +14,6 @@ import javafx.scene.control.*;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
@@ -24,8 +22,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -35,33 +33,25 @@ import java.util.ResourceBundle;
  * ТЕСТОВЫЙ ПУТЬ КЛОНИРОВАНИЯ: C:\Users\Администратор\Downloads\testFolder
  */
 public class LoginController implements Initializable {
-    private String curRepoUrl;
     private String curProtocol;
     private RepositoryContainer repositories = new RepositoryContainer();
     private final ObservableList<String> protocols =
             FXCollections.observableArrayList("http://", "https://");
+
+    private Stage stage;
+    private Scene scene;
+    private Parent root;
+
     @FXML
     private TextField tokenField;
     @FXML
-    private TextField pathField;
-    @FXML
     private TextField domainField;
-    @FXML
-    private ListView<String> nameList;
     @FXML
     private ChoiceBox<String> protocolChoice;
     @FXML
     public Button logIn;
     @FXML
-    private Button cloneButton;
-    @FXML
-    private Button backToLogin;
-    @FXML
-    private Button updateButton;
-    @FXML
     private Label errorLabel = new Label();
-    @FXML
-    private Label errorLabel2 = new Label();
 
     static final Logger rootLogger = LogManager.getRootLogger();
     static final Logger repoContainerLogger = LogManager.getLogger(RepositoryContainer.class);
@@ -74,14 +64,7 @@ public class LoginController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         rootLogger.info("Initialization");
         rootLogger.debug("Root Logger debug message!");
-        nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
-            curRepoUrl = repositories
-                    .getRepoMap()
-                    .get(nameList.getSelectionModel().getSelectedItem())
-                    .getRepoUrl()
-                    .substring(8);
-            rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
-        });
+        /**/
         try {
             if (protocols.isEmpty())
                 throw new Exception("Variable protocols not configured");
@@ -98,18 +81,11 @@ public class LoginController implements Initializable {
      * Сцена отображения и сцена авторизации!
      * Получает список репозиториев как результат API запроса и записывает в this.repositories.repoMap
      */
-    public void request(String url) {
+    public HashMap<String, Repository> request(String url) {
         rootLogger.info("Calling request(" + url + ")");
         try {
-            // оставить только при НЕ разнесении на разные сцены
-            // срабатывает если ты не нажал Log In и сразу нажал на update
-            /*if (url == null || url.isEmpty()) {
-                throw new Exception("Url is empty");
-            }*/
-         /*catch (AssertionError e) {
-            rootLogger.error("URL must not be null");
-            return;
-        }*/
+            HashMap<String, Repository> repoMap = new HashMap<>();
+
             RestTemplate restTemplate = new RestTemplate();
             System.out.println(url);
             String json = restTemplate.getForObject(url, String.class);
@@ -120,39 +96,22 @@ public class LoginController implements Initializable {
             ObjectMapper mapper = new ObjectMapper();
             List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
             for (Repository repo : repos)
-                this.repositories.addRepoMap(repo.getRepoName(), repo);
+                repoMap.put(repo.getRepoName(), repo);
+            if (!repoMap.isEmpty())
+                repoContainerLogger.info("Request result in this.repositories: " + repoMap.toString());
+            return repoMap;
         } catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
                 errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
             else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found") || e.getMessage().contains("I/O error"))
                 errorLabel.setText("Неверный домен");
-            else if (e.getMessage().equals("Protocol not specified"))
+            else if (e.getMessage().equals("Protocol not specified") || e.getMessage().contains("Response 301"))
                 errorLabel.setText("Неверно указан протокол");
             else if (e.getMessage().contains("401 Unauthorized"))
                 errorLabel.setText("Неверный токен");
-            /*else if (e.getMessage().equals("Url is empty"))
-                errorLabel.setText("URL пуст");*/
-            return;
+            return null;
         }
-        repoContainerLogger.info("Request result in this.repositories: " + this.repositories.toString());
-    }
-
-    /**
-     * Сцена отображения
-     * Функция обновления списка репозиториев
-     */
-    @FXML
-    public void update() {
-        rootLogger.info("Calling update()");
-        request(this.repositories.getRequestUrl());
-        nameList.setItems(FXCollections.observableArrayList());
-        nameList.getItems().addAll(
-                new ArrayList<>(
-                        this.repositories.getRepoMap().keySet()
-                )
-        );
-        rootLogger.info("Result of update(), nameList: " + nameList.toString());
     }
 
     /**
@@ -160,7 +119,7 @@ public class LoginController implements Initializable {
      * Авторизация по считываемому токену и отображение списка репозиториев
      */
     @FXML
-    public void authorization() {
+    public void authorization(ActionEvent event) {
         rootLogger.info("Calling authorization()");
         this.repositories.setToken(tokenField.getText());
         String domain = domainField.getText();
@@ -168,8 +127,11 @@ public class LoginController implements Initializable {
             if (curProtocol == null || curProtocol.isEmpty()) {
                 throw new Exception("Wrong protocol specification");
             }
-            if (domain == null || domain.isEmpty()) {
-                throw new Exception("Domain is empty");
+            else if (domain == null || domain.isEmpty()) {
+                throw new Exception("Domain is wrong");
+            }
+            else if (this.repositories.getToken() == null || this.repositories.getToken().isEmpty()) {
+                throw new Exception("Token is empty");
             }
             this.repositories.setRequestUrl(
                     curProtocol
@@ -180,89 +142,37 @@ public class LoginController implements Initializable {
                             + "&private_token="
                             + this.repositories.getToken()
             );
+            rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
+            this.repositories
+                    .setRepoMap(
+                            request(this.repositories.getRequestUrl())
+                    );
+            if (this.repositories.getRepoMap() == null || this.repositories.getRepoMap().isEmpty()) {
+                rootLogger.error("this.repositories.getRepoMap() is null or empty after calling request(): ");
+            } else {
+                rootLogger.debug("this.repositories after calling request(): " + this.repositories);
+
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/RepositoryTable.fxml"));
+                root = loader.load();
+
+                RepoController repoController = loader.getController();
+                repoController.setRepositories(this.repositories);
+
+                stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                scene = new Scene(root);
+                stage.setScene(scene);
+                stage.show();
+            }
+            rootLogger.info("Result of authorization(): called update()");
         } catch (Exception e) {
             if (e.getMessage().equals("Wrong protocol specification"))
                 errorLabel.setText("Неверно указан протокол");
-            if (e.getMessage().equals("Domain is empty"))
-                errorLabel.setText("Не указан домен");
+            if (e.getMessage().equals("Domain is wrong"))
+                errorLabel.setText("Неверно указан домен");
+            if (e.getMessage().equals("Token is empty"))
+                errorLabel.setText("Не указан токен");
             rootLogger.error(e.getMessage());
-            return;
         }
-        rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
-        update();
-
-        // Переход к сцене таблицы репозиториев
-        /*
-        root = FXMLLoader.load(getClass().getResource("/fxml/RepositoryTable.fxml"));
-        stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        scene = new Scene(root);
-        stage.setScene(scene);
-        stage.show();
-        */
-        rootLogger.info("Result of authorization(): called update");
     }
 
-    /**
-     * Сцена отображения
-     * Возврат к сцене авторизации
-     */
-    @FXML
-    public void getBackToLogin(ActionEvent event) throws IOException {
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        Scene scene = new Scene(root);
-        stage.setScene(scene);
-        stage.show();
-    }
-
-    /**
-     * Сцена отображения
-     * Клонирование репозитория в заданную директорию
-     */
-    @FXML
-    public void cloneRepo(ActionEvent event) {
-        rootLogger.info("Calling cloneRepo()");
-        // http://gitlab.dev.ppod.cbr.ru/
-        // А куда ^тут^ потом стучаться чтобы сделать git clone? v Сюда v же ?
-        String command = "git clone https://gitlab-ci-token:"
-                + this.repositories.getToken() + "@" + curRepoUrl;
-        rootLogger.debug("Command for ProcessBuilder is: " + command);
-        try {
-            String path = pathField.getText();
-            if (path == null || path.isEmpty()) {
-                throw new Exception("Path not specified");
-            }
-            if (curRepoUrl == null || curRepoUrl.isEmpty()) {
-                throw new Exception("Cloning repository not specified");
-            }
-            rootLogger.debug("Path for ProcessBuilder is: " + path);
-            String pbCommand = "cd " + path + " && " + command;
-            rootLogger.debug("Full command for ProcessBuilder is: " + pbCommand);
-            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", pbCommand);
-            builder.redirectErrorStream(true);
-            Process p = builder.start();
-            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line;
-            while (true) {
-                line = r.readLine();
-                if (line == null) {
-                    break;
-                }
-                // Вывод командной строки
-                rootLogger.debug("Trace from ProcessBuilder: " + line);
-            }
-        } catch (IOException e) {
-            rootLogger.error(e.getMessage());
-            errorLabel2.setText("Ошибка выполнения команды git clone");
-            return;
-        } catch (Exception e) {
-            rootLogger.error(e.getMessage());
-            if (e.getMessage().equals("Cloning repository not specified"))
-                errorLabel2.setText("Репозиторий для клонирования не выбран");
-            if (e.getMessage().equals("Path not specified"))
-                errorLabel2.setText("Путь клонирования не указан");
-            return;
-        }
-        rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
-    }
 }
