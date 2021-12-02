@@ -52,6 +52,9 @@ public class RepoController implements Initializable {
 
     static final Logger rootLogger = LogManager.getRootLogger();
 
+    /**
+     * Функция начальной инициализации сцены отображения репозиториев
+     */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
@@ -64,6 +67,11 @@ public class RepoController implements Initializable {
         });
     }
 
+    /**
+     * Сеттер для контейнера репозиториев
+     *
+     * @param repositories - контейнер репозиториев, передающийся со сцены авторизации
+     */
     public void setRepositories(RepositoryContainer repositories) {
         this.repositories = repositories;
         nameList.setItems(FXCollections.observableArrayList());
@@ -74,6 +82,9 @@ public class RepoController implements Initializable {
         );
     }
 
+    /**
+     * Функция выбора пути для клонирования
+     */
     @FXML
     public void pickPath() {
         DirectoryChooser dirChooser = new DirectoryChooser();
@@ -92,10 +103,23 @@ public class RepoController implements Initializable {
     @FXML
     public void update() {
         rootLogger.info("Calling update()");
-        this.repositories
-                .setRepoMap(
-                        request(this.repositories.getRequestUrl())
-                );
+        try {
+            this.repositories
+                    .setRepoMap(
+                            request(this.repositories.getRequestUrl())
+                    );
+        } catch (Exception e) {
+            rootLogger.error(e.getMessage());
+            if (e.getMessage().contains("403 Forbidden"))
+                errorLabel2.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
+            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
+                errorLabel2.setText("Неверный домен");
+            else if (e.getMessage().equals("Protocol not specified"))
+                errorLabel2.setText("Неверно указан протокол");
+            else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
+                errorLabel2.setText("Неверный токен");
+        }
+
         rootLogger.info("Result of update(), repositories: " + repositories.toString());
         nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
@@ -106,9 +130,12 @@ public class RepoController implements Initializable {
         rootLogger.info("Result of update(), nameList: " + nameList);
     }
 
-    public HashMap<String, Repository> request(String url) {
+    /**
+     * Получить список репозиториев как результат API запроса
+     */
+    public HashMap<String, Repository> request(String url) throws Exception{
         rootLogger.info("Calling request(" + url + ")");
-        try {
+        /*try {*/
             HashMap<String, Repository> repoMap = new HashMap<>();
 
             RestTemplate restTemplate = new RestTemplate();
@@ -124,20 +151,20 @@ public class RepoController implements Initializable {
                 repoMap.put(repo.getRepoName(), repo);
             rootLogger.info("Request result in this.repositories: " + repoMap.toString());
             return repoMap;
-        } catch (Exception e) {
+        /*} catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
                 errorLabel2.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
-            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found") || e.getMessage().contains("I/O error"))
+            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
                 errorLabel2.setText("Неверный домен");
             else if (e.getMessage().equals("Protocol not specified"))
                 errorLabel2.setText("Неверно указан протокол");
-            else if (e.getMessage().contains("401 Unauthorized"))
+            else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
                 errorLabel2.setText("Неверный токен");
-            /*else if (e.getMessage().equals("Url is empty"))
-                errorLabel.setText("URL пуст");*/
+            *//*else if (e.getMessage().equals("Url is empty"))
+                errorLabel.setText("URL пуст");*//*
             return null;
-        }
+        }*/
     }
 
 
@@ -167,10 +194,6 @@ public class RepoController implements Initializable {
                 + this.repositories.getToken() + "@" + curRepoUrl;
         rootLogger.debug("Command for ProcessBuilder is: " + command);
         try {
-            // String path = pathField.getText();
-            /*if (curDirectory == null || curDirectory.isEmpty()) {
-                throw new Exception("Path not specified");
-            }*/
             if (curRepoUrl == null || curRepoUrl.isEmpty()) {
                 throw new Exception("Cloning repository not specified");
             }

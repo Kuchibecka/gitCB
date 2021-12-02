@@ -38,10 +38,6 @@ public class LoginController implements Initializable {
     private final ObservableList<String> protocols =
             FXCollections.observableArrayList("http://", "https://");
 
-    private Stage stage;
-    private Scene scene;
-    private Parent root;
-
     @FXML
     private TextField tokenField;
     @FXML
@@ -57,8 +53,7 @@ public class LoginController implements Initializable {
     static final Logger repoContainerLogger = LogManager.getLogger(RepositoryContainer.class);
 
     /**
-     * Сцена отображения
-     * Функция начальной инициализации сцены
+     * Функция начальной инициализации сцены авторизации
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -78,10 +73,9 @@ public class LoginController implements Initializable {
     }
 
     /**
-     * Сцена отображения и сцена авторизации!
-     * Получает список репозиториев как результат API запроса и записывает в this.repositories.repoMap
+     * Получить список репозиториев как результат API запроса
      */
-    public HashMap<String, Repository> request(String url) {
+/*    public HashMap<String, Repository> request(String url) {
         rootLogger.info("Calling request(" + url + ")");
         try {
             HashMap<String, Repository> repoMap = new HashMap<>();
@@ -104,15 +98,15 @@ public class LoginController implements Initializable {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
                 errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
-            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found") || e.getMessage().contains("I/O error"))
+            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
                 errorLabel.setText("Неверный домен");
             else if (e.getMessage().equals("Protocol not specified") || e.getMessage().contains("Response 301"))
                 errorLabel.setText("Неверно указан протокол");
-            else if (e.getMessage().contains("401 Unauthorized"))
+            else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
                 errorLabel.setText("Неверный токен");
             return null;
         }
-    }
+    }*/
 
     /**
      * Сцена авторизации
@@ -126,11 +120,9 @@ public class LoginController implements Initializable {
         try {
             if (curProtocol == null || curProtocol.isEmpty()) {
                 throw new Exception("Wrong protocol specification");
-            }
-            else if (domain == null || domain.isEmpty()) {
+            } else if (domain == null || domain.isEmpty()) {
                 throw new Exception("Domain is wrong");
-            }
-            else if (this.repositories.getToken() == null || this.repositories.getToken().isEmpty()) {
+            } else if (this.repositories.getToken() == null || this.repositories.getToken().isEmpty()) {
                 throw new Exception("Token is empty");
             }
             this.repositories.setRequestUrl(
@@ -143,23 +135,34 @@ public class LoginController implements Initializable {
                             + this.repositories.getToken()
             );
             rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
-            this.repositories
-                    .setRepoMap(
-                            request(this.repositories.getRequestUrl())
-                    );
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/RepositoryTable.fxml"));
+            Parent root = loader.load();
+            RepoController repoController = loader.getController();
+            try {
+                this.repositories
+                        .setRepoMap(
+                                repoController.request(this.repositories.getRequestUrl())
+                        );
+            } catch (Exception e) {
+                rootLogger.error(e.getMessage());
+                if (e.getMessage().contains("403 Forbidden"))
+                    errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
+                else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
+                    errorLabel.setText("Неверный домен");
+                else if (e.getMessage().equals("Protocol not specified") || e.getMessage().contains("Response 301"))
+                    errorLabel.setText("Неверно указан протокол");
+                else if (e.getMessage().contains("401 Unauthorized"))
+                    errorLabel.setText("Неверный токен");
+                else if (e.getMessage().contains("I/O error)"))
+                    errorLabel.setText("Проверьте подключение к интернету");
+            }
             if (this.repositories.getRepoMap() == null || this.repositories.getRepoMap().isEmpty()) {
                 rootLogger.error("this.repositories.getRepoMap() is null or empty after calling request(): ");
             } else {
                 rootLogger.debug("this.repositories after calling request(): " + this.repositories);
-
-                FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/RepositoryTable.fxml"));
-                root = loader.load();
-
-                RepoController repoController = loader.getController();
                 repoController.setRepositories(this.repositories);
-
-                stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-                scene = new Scene(root);
+                Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                Scene scene = new Scene(root);
                 stage.setScene(scene);
                 stage.show();
             }
