@@ -17,6 +17,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
@@ -87,22 +88,24 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void pickPath() {
+        errorLabel2.setText("");
         DirectoryChooser dirChooser = new DirectoryChooser();
         Stage stage = new Stage();
         File file = dirChooser.showDialog(stage);
-        if (file != null)
+        if (file != null) {
             this.curDirectory = file.getAbsolutePath();
-        pathLabel.setText(this.curDirectory);
+            pathLabel.setText(this.curDirectory);
+        }
         System.out.println("Picked directory: " + this.curDirectory);
     }
 
     /**
-     * Сцена отображения
      * Функция обновления списка репозиториев
      */
     @FXML
     public void update() {
         rootLogger.info("Calling update()");
+        errorLabel2.setText("");
         try {
             this.repositories
                     .setRepoMap(
@@ -119,8 +122,7 @@ public class RepoController implements Initializable {
             else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
                 errorLabel2.setText("Неверный токен");
         }
-
-        rootLogger.info("Result of update(), repositories: " + repositories.toString());
+        rootLogger.info("Result of update(), this.repositories: " + repositories.toString());
         nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
                 new ArrayList<>(
@@ -133,24 +135,25 @@ public class RepoController implements Initializable {
     /**
      * Получить список репозиториев как результат API запроса
      */
-    public HashMap<String, Repository> request(String url) throws Exception{
+    public HashMap<String, Repository> request(String url) throws Exception {
         rootLogger.info("Calling request(" + url + ")");
         /*try {*/
-            HashMap<String, Repository> repoMap = new HashMap<>();
+        HashMap<String, Repository> repoMap = new HashMap<>();
 
-            RestTemplate restTemplate = new RestTemplate();
-            System.out.println(url);
-            String json = restTemplate.getForObject(url, String.class);
-            if (json == null || json.isEmpty()) {
-                throw new Exception("Protocol not specified");
-            }
-            rootLogger.debug("JSON in request(): " + json);
-            ObjectMapper mapper = new ObjectMapper();
-            List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
-            for (Repository repo : repos)
-                repoMap.put(repo.getRepoName(), repo);
-            rootLogger.info("Request result in this.repositories: " + repoMap.toString());
-            return repoMap;
+        RestTemplate restTemplate = new RestTemplate();
+        System.out.println(url);
+        String json = null;
+        json = restTemplate.getForObject(url, String.class);
+        if (json == null || json.isEmpty()) {
+            throw new Exception("Protocol not specified");
+        }
+        rootLogger.debug("JSON in request(): " + json);
+        ObjectMapper mapper = new ObjectMapper();
+        List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
+        for (Repository repo : repos)
+            repoMap.put(repo.getRepoName(), repo);
+        rootLogger.info("Request result in this.repositories: " + repoMap.toString());
+        return repoMap;
         /*} catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
@@ -169,7 +172,6 @@ public class RepoController implements Initializable {
 
 
     /**
-     * Сцена отображения
      * Возврат к сцене авторизации
      */
     @FXML
@@ -179,24 +181,30 @@ public class RepoController implements Initializable {
         Scene scene = new Scene(root);
         stage.setScene(scene);
         stage.show();
+        rootLogger.info("Result of getBackToLogin(): Login scene setting");
     }
 
     /**
-     * Сцена отображения
      * Клонирование репозитория в заданную директорию
      */
     @FXML
-    public void cloneRepo(ActionEvent event) {
+    public void cloneRepo() {
+        errorLabel2.setText("");
         rootLogger.info("Calling cloneRepo()");
-        // http://gitlab.dev.ppod.cbr.ru/
-        // А куда ^тут^ потом стучаться чтобы сделать git clone? v Сюда v же ?
         String command = "git clone https://gitlab-ci-token:"
                 + this.repositories.getToken() + "@" + curRepoUrl;
         rootLogger.debug("Command for ProcessBuilder is: " + command);
+        if (curRepoUrl == null || curRepoUrl.isEmpty()) {
+            rootLogger.error("Cloning repository URL not specified");
+            errorLabel2.setText("Репозиторий для клонирования не выбран");
+            return;
+        }
+        if (this.curDirectory == null || this.curDirectory.isEmpty()) {
+            rootLogger.error("Directory not specified");
+            errorLabel2.setText("Путь клонирования не указан");
+            return;
+        }
         try {
-            if (curRepoUrl == null || curRepoUrl.isEmpty()) {
-                throw new Exception("Cloning repository not specified");
-            }
             rootLogger.debug("Path for ProcessBuilder is: " + curDirectory);
             String pbCommand = "cd " + curDirectory + " && " + command;
             rootLogger.debug("Full command for ProcessBuilder is: " + pbCommand);
@@ -217,15 +225,7 @@ public class RepoController implements Initializable {
             rootLogger.error(e.getMessage());
             errorLabel2.setText("Ошибка выполнения команды git clone");
             return;
-        } catch (Exception e) {
-            rootLogger.error(e.getMessage());
-            if (e.getMessage().equals("Cloning repository not specified"))
-                errorLabel2.setText("Репозиторий для клонирования не выбран");
-            if (e.getMessage().equals("Path not specified"))
-                errorLabel2.setText("Путь клонирования не указан");
-            return;
         }
         rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
-
     }
 }
