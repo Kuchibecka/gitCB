@@ -104,6 +104,7 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void update() {
+        nameList.setItems(FXCollections.observableArrayList());
         rootLogger.info("Calling update()");
         errorLabel2.setText("");
         try {
@@ -123,7 +124,6 @@ public class RepoController implements Initializable {
                 errorLabel2.setText("Неверный токен");
         }
         rootLogger.info("Result of update(), this.repositories: " + repositories.toString());
-        nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
                 new ArrayList<>(
                         this.repositories.getRepoMap().keySet()
@@ -220,6 +220,15 @@ public class RepoController implements Initializable {
                 }
                 // Вывод командной строки
                 rootLogger.debug("Trace from ProcessBuilder: " + line);
+                if (line.contains("already exists and is not an empty directory.")) {
+                    rootLogger.error("Directory already exists");
+                    errorLabel2.setText("Непустая папка с таким названием уже существует");
+                }
+                if (line.contains("Receiving objects: 100%")) {
+                    // System.out.println("СТООООООООООООООООООООООООООООООООООООООООООООО");
+                    /*rootLogger.error("Directory already exists");
+                    errorLabel2.setText("Непустая папка с таким названием уже существует");*/
+                }
             }
         } catch (IOException e) {
             rootLogger.error(e.getMessage());

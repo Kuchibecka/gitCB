@@ -31,7 +31,7 @@ import java.util.ResourceBundle;
  * ТОКЕН ДЛЯ АВТОРИЗАЦИИ: glpat-u_xNuwLFH-dW66uHigMz
  * ТОКЕН БЕЗ API: glpat-AGW_F2nA9uzypQVA9B6Q
  * ТЕСТОВЫЙ ПУТЬ КЛОНИРОВАНИЯ: C:\Users\Администратор\Downloads\testFolder
- * <p>
+ *
  * http://gitlab.dev.ppod.cbr.ru/
  */
 public class LoginController implements Initializable {
@@ -52,7 +52,6 @@ public class LoginController implements Initializable {
     private Label errorLabel = new Label();
 
     static final Logger rootLogger = LogManager.getRootLogger();
-    static final Logger repoContainerLogger = LogManager.getLogger(RepositoryContainer.class);
 
     /**
      * Функция начальной инициализации сцены авторизации
