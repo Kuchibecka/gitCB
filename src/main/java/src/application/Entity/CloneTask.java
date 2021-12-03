@@ -57,8 +57,6 @@ public class CloneTask extends Task<String> {
                 }
                 if (line.contains("Receiving objects: 100%"))
                     this.updateProgress(400, 400);
-
-                // todo: v вернуть v
                 rootLogger.debug("Trace from ProcessBuilder: " + line);
                 if (line.contains("already exists and is not an empty directory.")) {
                     rootLogger.error("Directory already exists");
