@@ -1,23 +1,27 @@
 package src.application.Entity;
 
 import javafx.concurrent.Task;
-
 import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.Buffer;
 
+/**
+ * Задача обновления репозитория до актуального состояния
+ */
 public class UpdateTask extends Task<String> {
     private Logger rootLogger;
-    private String updateCommand;
+    private final String updateCommand;
 
     public UpdateTask(Logger rootLogger, String updateCommand) {
         this.rootLogger = rootLogger;
         this.updateCommand = updateCommand;
     }
 
+    /**
+     * @return String Статус завершения задачи обновления репозитория
+     */
     @Override
     protected String call() {
         rootLogger.info("Calling git repository update task");
@@ -31,6 +35,7 @@ public class UpdateTask extends Task<String> {
                 line = pullReader.readLine();
                 rootLogger.debug("Trace from ProcessBuilder: " + line);
                 if (line.contains("Updating")) {
+                    rootLogger.debug("Updating repository due to detected changes");
                     break;
                 }
                 if (line.contains("Already up to date")) {

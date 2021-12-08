@@ -7,7 +7,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-
+/**
+ * Задача клонирования репозитория
+ */
 public class CloneTask extends Task<String> {
 
     private String cloneCommand;
@@ -27,6 +29,9 @@ public class CloneTask extends Task<String> {
         this.cloneCommand = cloneCommand;
     }
 
+    /**
+     * @return String Статус завершения задачи клонирования репозитория
+     */
     @Override
     protected String call() {
         rootLogger.info("Calling git clone task");
