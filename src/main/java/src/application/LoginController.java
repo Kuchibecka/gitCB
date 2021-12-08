@@ -69,42 +69,6 @@ public class LoginController implements Initializable {
     }
 
     /**
-     * Получить список репозиториев как результат API запроса
-     */
-/*    public HashMap<String, Repository> request(String url) {
-        rootLogger.info("Calling request(" + url + ")");
-        try {
-            HashMap<String, Repository> repoMap = new HashMap<>();
-
-            RestTemplate restTemplate = new RestTemplate();
-            System.out.println(url);
-            String json = restTemplate.getForObject(url, String.class);
-            if (json == null || json.isEmpty()) {
-                throw new Exception("Protocol not specified");
-            }
-            rootLogger.debug("JSON in request(): " + json);
-            ObjectMapper mapper = new ObjectMapper();
-            List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
-            for (Repository repo : repos)
-                repoMap.put(repo.getRepoName(), repo);
-            if (!repoMap.isEmpty())
-                repoContainerLogger.info("Request result in this.repositories: " + repoMap.toString());
-            return repoMap;
-        } catch (Exception e) {
-            rootLogger.error(e.getMessage());
-            if (e.getMessage().contains("403 Forbidden"))
-                errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
-            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
-                errorLabel.setText("Неверный домен");
-            else if (e.getMessage().equals("Protocol not specified") || e.getMessage().contains("Response 301"))
-                errorLabel.setText("Неверно указан протокол");
-            else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
-                errorLabel.setText("Неверный токен");
-            return null;
-        }
-    }*/
-
-    /**
      * Сцена авторизации
      * Авторизация по считываемому токену и отображение списка репозиториев
      */

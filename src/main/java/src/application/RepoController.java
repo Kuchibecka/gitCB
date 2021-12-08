@@ -21,6 +21,7 @@ import org.springframework.web.client.RestTemplate;
 import src.application.Entity.CloneTask;
 import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
+import src.application.Entity.UpdateTask;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -35,6 +36,7 @@ import java.util.*;
 public class RepoController implements Initializable {
     private RepositoryContainer repositories = new RepositoryContainer();
     private String curRepoUrl;
+    private String curRepoName;
     private String curDirectory;
 
     @FXML
@@ -50,13 +52,9 @@ public class RepoController implements Initializable {
     @FXML
     private Button pathPicker;
     @FXML
-    private TextField pathField;
-    @FXML
     private Label pathLabel;
     @FXML
     private ProgressBar progressBar = new ProgressBar(0);
-    @FXML
-    private ProgressIndicator progressIndicator = new ProgressIndicator(0);
     @FXML
     private Label progressLabel = new Label();
 
@@ -70,10 +68,14 @@ public class RepoController implements Initializable {
     public void initialize(URL location, ResourceBundle resources) {
         nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
             Repository repository = repositories.getRepoMap().get(nameList.getSelectionModel().getSelectedItem());
-            if (repository != null)
+            if (repository != null) {
                 curRepoUrl = repository
                         .getRepoUrl()
                         .substring(8);
+                curRepoName = repository
+                        .getRepoName();
+            }
+            progressBar.setVisible(false);
             rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
     }
@@ -166,20 +168,6 @@ public class RepoController implements Initializable {
             repoMap.put(repo.getRepoName(), repo);
         rootLogger.info("Request result in this.repositories: " + repoMap.toString());
         return repoMap;
-        /*} catch (Exception e) {
-            rootLogger.error(e.getMessage());
-            if (e.getMessage().contains("403 Forbidden"))
-                errorLabel2.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
-            else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
-                errorLabel2.setText("Неверный домен");
-            else if (e.getMessage().equals("Protocol not specified"))
-                errorLabel2.setText("Неверно указан протокол");
-            else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
-                errorLabel2.setText("Неверный токен");
-            *//*else if (e.getMessage().equals("Url is empty"))
-                errorLabel.setText("URL пуст");*//*
-            return null;
-        }*/
     }
 
 
@@ -220,66 +208,46 @@ public class RepoController implements Initializable {
         CloneTask cloneTask = new CloneTask(pbCommand, rootLogger);
         progressBar.progressProperty().unbind();
         progressBar.progressProperty().bind(cloneTask.progressProperty());
-        progressIndicator.progressProperty().unbind();
-        progressIndicator.progressProperty().bind(cloneTask.progressProperty());
         progressLabel.textProperty().unbind();
         progressLabel.textProperty().bind(cloneTask.messageProperty());
 
         cloneTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED,
                 event -> {
+                    progressBar.setVisible(false);
                     String result = cloneTask.getValue();
                     progressLabel.textProperty().unbind();
-                    if (result.equals("none")) {
+                    if (result.equals("none"))
                         progressLabel.setText("Готово");
-                    } else {
-                        errorLabel2.setText(result);
-                        progressLabel.setText("Что-то пошло не так");
+                    else {
+                        if (result.equals("Непустая папка с таким\nназванием уже существует")) {
+                            String name = curRepoName.toLowerCase().replace(" ", "-");
+                            String updateCommand = "cd " + curDirectory + "\\" + name + " && " + "git pull";
+                            System.out.println("_____________command:" + updateCommand);
+                            UpdateTask updateTask = new UpdateTask(rootLogger, updateCommand);
+                            updateTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED,
+                                    e -> {
+                                        String res = updateTask.getValue();
+                                        // progressLabel.textProperty().unbind();
+                                        switch (res) {
+                                            case "No changes":
+                                                progressLabel.setText("Репозиторий актуален,\nизменений нет");
+                                                break;
+                                            case "Репозиторий обновлён\nдо актуальной версии":
+                                                progressLabel.setText("Репозиторий обновлён\nдо актуальной версии");
+                                                break;
+                                            default:
+                                                errorLabel2.setText(res);
+                                                break;
+                                        }
 
+
+                                    });
+                            new Thread(updateTask).start();
+                        }
                     }
                 });
-
+        progressBar.setVisible(true);
         new Thread(cloneTask).start();
-        /*try {
-            rootLogger.debug("Path for ProcessBuilder is: " + curDirectory);
-            String pbCommand = "cd " + curDirectory + " && " + command;
-            rootLogger.debug("Full command for ProcessBuilder is: " + pbCommand);
-            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", pbCommand);
-            builder.redirectErrorStream(true);
-            Process p = builder.start();
-            BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String line;
-            *//*int count = 400;*//*
-            int totalProgress = 0;
-            int progress = 0;
-            while (true) {
-                line = r.readLine();
-                if (line == null) {
-                    break;
-                }
-                // Вывод командной строки
-                if (line.contains(":") && line.contains("%") && !line.contains("done")) {
-                    int curProgress = Integer.parseInt(line.substring(line.lastIndexOf(':') + 1, line.lastIndexOf('%')).replaceAll("\\s+", ""));
-                    System.out.println(curProgress);
-                    if (curProgress > progress *//*|| curProgress == 0*//*) {
-                        totalProgress = totalProgress - progress + curProgress;
-                        System.out.println("************Total progress is: " + totalProgress);
-                        progress = curProgress;
-                        if (progress == 100)
-                            progress = 0;
-                    }
-                }
-                rootLogger.debug("Trace from ProcessBuilder: " + line);
-                if (line.contains("already exists and is not an empty directory.")) {
-                    rootLogger.error("Directory already exists");
-                    errorLabel2.setText("Непустая папка с таким названием уже существует");
-                }
-                // todo: обновление статуса
-            }
-        } catch (IOException e) {
-            rootLogger.error(e.getMessage());
-            errorLabel2.setText("Ошибка выполнения команды git clone");
-            return;
-        }*/
         rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
     }
 }

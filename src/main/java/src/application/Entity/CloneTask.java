@@ -44,7 +44,6 @@ public class CloneTask extends Task<String> {
                 if (line == null) {
                     break;
                 }
-                // Вывод командной строки
                 if (line.contains(":") && line.contains("%") && !line.contains("done")) {
                     int curProgress = Integer.parseInt(line.substring(line.lastIndexOf(':') + 1, line.lastIndexOf('%')).replaceAll("\\s+", ""));
                     if (curProgress >= progress) {
@@ -59,14 +58,14 @@ public class CloneTask extends Task<String> {
                     this.updateProgress(400, 400);
                 rootLogger.debug("Trace from ProcessBuilder: " + line);
                 if (line.contains("already exists and is not an empty directory.")) {
-                    rootLogger.error("Directory already exists");
+                    rootLogger.debug("Directory already exists. Trying to update repository");
                     this.updateProgress(0, 400);
-                    return "Непустая папка с таким названием уже существует";
+                    return "Непустая папка с таким\nназванием уже существует";
                 }
             }
         } catch (IOException e) {
             rootLogger.error(e.getMessage());
-            return "Ошибка выполнения команды git clone";
+            return "Ошибка выполнения\nкоманды git clone";
         }
         return "none";
     }
