@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.collections.FXCollections;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -16,20 +16,16 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.CloneTask;
 import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
 import src.application.Entity.UpdateTask;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -46,18 +42,17 @@ public class RepoController implements Initializable {
     @FXML
     private Button cloneButton;
     @FXML
-    private Button backToLogin;
+    private Button backButton;
     @FXML
     private Button updateButton;
     @FXML
-    private Button pathPicker;
+    private Button pathButton;
     @FXML
     private Label pathLabel;
     @FXML
     private ProgressBar progressBar = new ProgressBar(0);
     @FXML
     private Label progressLabel = new Label();
-
 
     static final Logger rootLogger = LogManager.getRootLogger();
 
@@ -66,6 +61,7 @@ public class RepoController implements Initializable {
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        progressBar.setVisible(false);
         nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
             Repository repository = repositories.getRepoMap().get(nameList.getSelectionModel().getSelectedItem());
             if (repository != null) {
@@ -75,7 +71,6 @@ public class RepoController implements Initializable {
                 curRepoName = repository
                         .getRepoName();
             }
-            progressBar.setVisible(false);
             rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
     }
@@ -93,6 +88,41 @@ public class RepoController implements Initializable {
                         this.repositories.getRepoMap().keySet()
                 )
         );
+    }
+
+    /**
+     * Получить список репозиториев как результат API запроса
+     */
+    public HashMap<String, Repository> request(String url) throws Exception {
+        /*Scene scene = cloneButton.getScene();
+        scene.setCursor(Cursor.WAIT);*/
+        rootLogger.info("Calling request(" + url + ")");
+        HashMap<String, Repository> repoMap = new HashMap<>();
+        RestTemplate restTemplate = new RestTemplate();
+        String json = restTemplate.getForObject(url, String.class);
+        if (json == null || json.isEmpty()) {
+            throw new Exception("Protocol not specified");
+        }
+        rootLogger.debug("JSON in request(): " + json);
+        ObjectMapper mapper = new ObjectMapper();
+        List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
+        for (Repository repo : repos)
+            repoMap.put(repo.getRepoName(), repo);
+        rootLogger.info("Request result in this.repositories: " + repoMap.toString());
+        /*scene.setCursor(Cursor.DEFAULT);*/
+        return repoMap;
+    }
+
+    /**
+     * Блокировка/разблокировка кнопок для выполняющихся процессов
+     *
+     * @param b - включение кнопок - true, отключение - false
+     */
+    public void enableButtons(boolean b) {
+        cloneButton.setDisable(!b);
+        updateButton.setDisable(!b);
+        backButton.setDisable(!b);
+        pathButton.setDisable(!b);
     }
 
     /**
@@ -122,6 +152,7 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void update() {
+        enableButtons(false);
         nameList.setItems(FXCollections.observableArrayList());
         rootLogger.info("Calling update()");
         errorLabel2.setText("");
@@ -140,6 +171,8 @@ public class RepoController implements Initializable {
                 errorLabel2.setText("Неверно указан протокол");
             else if (e.getMessage().contains("401 Unauthorized") || e.getMessage().contains("I/O error"))
                 errorLabel2.setText("Неверный токен");
+        } finally {
+            enableButtons(true);
         }
         rootLogger.info("Result of update(), this.repositories: " + repositories.toString());
         nameList.getItems().addAll(
@@ -151,37 +184,20 @@ public class RepoController implements Initializable {
     }
 
     /**
-     * Получить список репозиториев как результат API запроса
-     */
-    public HashMap<String, Repository> request(String url) throws Exception {
-        rootLogger.info("Calling request(" + url + ")");
-        HashMap<String, Repository> repoMap = new HashMap<>();
-        RestTemplate restTemplate = new RestTemplate();
-        String json = restTemplate.getForObject(url, String.class);
-        if (json == null || json.isEmpty()) {
-            throw new Exception("Protocol not specified");
-        }
-        rootLogger.debug("JSON in request(): " + json);
-        ObjectMapper mapper = new ObjectMapper();
-        List<Repository> repos = Arrays.asList(mapper.readValue(json, Repository[].class));
-        for (Repository repo : repos)
-            repoMap.put(repo.getRepoName(), repo);
-        rootLogger.info("Request result in this.repositories: " + repoMap.toString());
-        return repoMap;
-    }
-
-
-    /**
      * Возврат к сцене авторизации
      */
     @FXML
-    public void getBackToLogin(ActionEvent event) throws IOException {
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
-        Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-        Scene scene = new Scene(root);
-        stage.setScene(scene);
-        stage.show();
-        rootLogger.info("Result of getBackToLogin(): Login scene setting");
+    public void getBackToLogin(ActionEvent event) {
+        try {
+            Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            Scene scene = new Scene(root);
+            stage.setScene(scene);
+            stage.show();
+            rootLogger.info("Result of getBackToLogin(): Login scene setting");
+        } catch (IOException e) {
+            rootLogger.error(e.getMessage());
+        }
     }
 
     /**
@@ -189,6 +205,10 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void cloneRepo() {
+        progressBar.setVisible(true);
+        Scene scene = cloneButton.getScene();
+        scene.setCursor(Cursor.WAIT);
+        enableButtons(false);
         errorLabel2.setText("");
         rootLogger.info("Calling cloneRepo()");
         String command = "git clone --progress https://gitlab-ci-token:"
@@ -197,11 +217,17 @@ public class RepoController implements Initializable {
         if (curRepoUrl == null || curRepoUrl.isEmpty()) {
             rootLogger.error("Cloning repository URL not specified");
             errorLabel2.setText("Репозиторий для клонирования не выбран");
+            enableButtons(true);
+            scene.setCursor(Cursor.DEFAULT);
+            progressBar.setVisible(false);
             return;
         }
         if (this.curDirectory == null || this.curDirectory.isEmpty()) {
             rootLogger.error("Directory not specified");
             errorLabel2.setText("Путь клонирования не указан");
+            enableButtons(true);
+            scene.setCursor(Cursor.DEFAULT);
+            progressBar.setVisible(false);
             return;
         }
         String pbCommand = "cd " + curDirectory + " && " + command;
@@ -213,7 +239,7 @@ public class RepoController implements Initializable {
 
         cloneTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED,
                 event -> {
-                    progressBar.setVisible(false);
+                    //progressBar.setVisible(false);
                     String result = cloneTask.getValue();
                     progressLabel.textProperty().unbind();
                     if (result.equals("none"))
@@ -224,6 +250,8 @@ public class RepoController implements Initializable {
                             String updateCommand = "cd " + curDirectory + "\\" + name + " && " + "git pull";
                             System.out.println("_____________command:" + updateCommand);
                             UpdateTask updateTask = new UpdateTask(rootLogger, updateCommand);
+                            progressBar.progressProperty().unbind();
+                            progressBar.progressProperty().bind(updateTask.progressProperty());
                             updateTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED,
                                     e -> {
                                         String res = updateTask.getValue();
@@ -237,16 +265,17 @@ public class RepoController implements Initializable {
                                                 break;
                                             default:
                                                 errorLabel2.setText(res);
+                                                progressBar.setVisible(false);
                                                 break;
                                         }
-
-
                                     });
                             new Thread(updateTask).start();
-                        }
+                        } else
+                            errorLabel2.setText(result);
                     }
+                    scene.setCursor(Cursor.DEFAULT);
+                    enableButtons(true);
                 });
-        progressBar.setVisible(true);
         new Thread(cloneTask).start();
         rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
     }
