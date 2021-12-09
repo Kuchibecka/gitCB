@@ -11,6 +11,9 @@ public class Repository {
     @JsonProperty("http_url_to_repo")
     private String repoUrl;
 
+    @JsonProperty("description")
+    private String repoDescription;
+
     public Repository(String repoName, String repoUrl) {
         this.repoName = repoName;
         this.repoUrl = repoUrl;
@@ -23,16 +26,12 @@ public class Repository {
         return repoName;
     }
 
-    public void setRepoName(String repoName) {
-        this.repoName = repoName;
-    }
-
     public String getRepoUrl() {
         return repoUrl;
     }
 
-    public void setRepoUrl(String repoUrl) {
-        this.repoUrl = repoUrl;
+    public String getRepoDescription() {
+        return repoDescription;
     }
 
     @Override
@@ -40,6 +39,7 @@ public class Repository {
         return "Repository{" +
                 "repoName='" + repoName + '\'' +
                 ", repoUrl='" + repoUrl + '\'' +
+                ", repoDescription='" + repoDescription + '\'' +
                 '}';
     }
 }

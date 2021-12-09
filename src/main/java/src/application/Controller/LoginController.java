@@ -10,10 +10,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.ChoiceBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,6 +43,8 @@ public class LoginController implements Initializable {
     @FXML
     private Label errorLabel = new Label();
 
+    private final Tooltip loginButtonTooltip = new Tooltip("Авторизоваться");
+
     static final Logger rootLogger = LogManager.getRootLogger();
 
     /**
@@ -54,6 +53,7 @@ public class LoginController implements Initializable {
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         rootLogger.info("Initialization");
+        loginButton.setTooltip(loginButtonTooltip);
         if (protocols.isEmpty()) {
             rootLogger.error("Variable protocols not configured");
             errorLabel.setText("Список протоколов не задан");
@@ -124,9 +124,9 @@ public class LoginController implements Initializable {
         } catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
-                errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nили неверно указан домен");
+                errorLabel.setText("Токен не обладает нужными правами (Требуется доступ к API) или неверно указан домен");
             else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found") || e.getMessage().contains("UnknownHostException"))
-                errorLabel.setText("Неверный домен или отсутствует\nподключение к интернету");
+                errorLabel.setText("Неверный домен или отсутствует подключение к интернету");
             else if (e.getMessage().equals("Protocol not specified") || e.getMessage().contains("Response 301"))
                 errorLabel.setText("Неверно указан протокол");
             else if (e.getMessage().contains("401 Unauthorized"))

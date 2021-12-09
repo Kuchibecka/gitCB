@@ -65,12 +65,12 @@ public class CloneTask extends Task<String> {
                 if (line.contains("already exists and is not an empty directory.")) {
                     rootLogger.debug("Directory already exists. Trying to update repository");
                     this.updateProgress(0, 400);
-                    return "Непустая папка с таким\nназванием уже существует";
+                    return "Непустая папка с таким названием уже существует";
                 }
             }
         } catch (IOException e) {
             rootLogger.error(e.getMessage());
-            return "Ошибка выполнения\nкоманды git clone";
+            return "Ошибка выполнения команды git clone";
         }
         return "none";
     }

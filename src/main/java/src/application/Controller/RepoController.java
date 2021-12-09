@@ -33,12 +33,17 @@ public class RepoController implements Initializable {
     private RepositoryContainer repositories = new RepositoryContainer();
     private String curRepoUrl;
     private String curRepoName;
+    private String curRepoDescription;
     private String curDirectory;
 
     @FXML
     private ListView<String> nameList;
     @FXML
     private Label errorLabel2 = new Label();
+    @FXML
+    private Label progressLabel = new Label();
+    @FXML
+    private Label descriptionLabelLabel = new Label();
     @FXML
     private Button cloneButton;
     @FXML
@@ -50,9 +55,15 @@ public class RepoController implements Initializable {
     @FXML
     private Label pathLabel;
     @FXML
-    private ProgressBar progressBar = new ProgressBar(0);
+    private Label descriptionLabel;
     @FXML
-    private Label progressLabel = new Label();
+    private ProgressBar progressBar = new ProgressBar(0);
+
+
+    private final Tooltip backButtonTooltip = new Tooltip("Назад к авторизации");
+    private final Tooltip updateButtonTooltip = new Tooltip("Обновить список репозиториев");
+    private final Tooltip cloneButtonTooltip = new Tooltip("Клонировать репозиторий в выбарнную папку");
+    private final Tooltip pathButtonTooltip = new Tooltip("Выбрать папку клонирования");
 
     static final Logger rootLogger = LogManager.getRootLogger();
 
@@ -61,15 +72,22 @@ public class RepoController implements Initializable {
      */
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        backButton.setTooltip(backButtonTooltip);
+        updateButton.setTooltip(updateButtonTooltip);
+        cloneButton.setTooltip(cloneButtonTooltip);
+        pathButton.setTooltip(pathButtonTooltip);
         progressBar.setVisible(false);
+        descriptionLabelLabel.setVisible(false);
         nameList.getSelectionModel().selectedItemProperty().addListener((arg0, arg1, arg2) -> {
             Repository repository = repositories.getRepoMap().get(nameList.getSelectionModel().getSelectedItem());
             if (repository != null) {
                 curRepoUrl = repository
                         .getRepoUrl()
                         .substring(8);
-                curRepoName = repository
-                        .getRepoName();
+                curRepoDescription = repository
+                        .getRepoDescription();
+                descriptionLabel.setText(repository.getRepoName());
+                descriptionLabelLabel.setVisible(true);
             }
             rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
@@ -81,7 +99,6 @@ public class RepoController implements Initializable {
      * @param repositories - контейнер репозиториев, передающийся со сцены авторизации
      */
     public void setRepositories(RepositoryContainer repositories) {
-        progressBar.setVisible(false);
         this.repositories = repositories;
         nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
@@ -129,6 +146,7 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void pickPath() {
+        progressBar.setVisible(false);
         errorLabel2.setText("");
         DirectoryChooser dirChooser = new DirectoryChooser();
         Stage stage = new Stage();
@@ -163,7 +181,7 @@ public class RepoController implements Initializable {
         } catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
-                errorLabel2.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
+                errorLabel2.setText("Токен не обладает нужными правами (Требуется доступ к API) или неверно указан домен");
             else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found"))
                 errorLabel2.setText("Неверный домен");
             else if (e.getMessage().equals("Protocol not specified"))
@@ -179,7 +197,7 @@ public class RepoController implements Initializable {
                         this.repositories.getRepoMap().keySet()
                 )
         );
-        rootLogger.info("Result of update(), nameList: " + nameList);
+        rootLogger.info("Result of update(), nameList: " + nameList.getItems().toString());
     }
 
     /**
@@ -242,7 +260,7 @@ public class RepoController implements Initializable {
             if (result.equals("none"))
                 progressLabel.setText("Готово");
             else {
-                if (result.equals("Непустая папка с таким\nназванием уже существует")) {
+                if (result.equals("Непустая папка с таким названием уже существует")) {
                     String name = curRepoName.toLowerCase().replace(" ", "-");
                     String updateCommand = "cd " + curDirectory + "\\" + name + " && " + "git pull";
                     rootLogger.debug("Update command for ProcessBuilder: " + updateCommand);
@@ -253,10 +271,10 @@ public class RepoController implements Initializable {
                         String res = updateTask.getValue();
                         switch (res) {
                             case "No changes":
-                                progressLabel.setText("Репозиторий актуален,\nизменений нет");
+                                progressLabel.setText("Репозиторий актуален, изменений нет");
                                 break;
-                            case "Репозиторий обновлён\nдо актуальной версии":
-                                progressLabel.setText("Репозиторий обновлён\nдо актуальной версии");
+                            case "Репозиторий обновлён до актуальной версии":
+                                progressLabel.setText("Репозиторий обновлён до актуальной версии");
                                 break;
                             default:
                                 errorLabel2.setText(res);

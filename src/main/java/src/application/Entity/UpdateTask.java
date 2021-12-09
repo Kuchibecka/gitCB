@@ -47,16 +47,16 @@ public class UpdateTask extends Task<String> {
                 }
                 if (line.contains("changed")) {
                     this.updateProgress(100,100);
-                    return "Репозиторий обновлён\nдо актуальной версии";
+                    return "Репозиторий обновлён до актуальной версии";
                 }
                 if (line.contains("fatal: not a git repository")) {
                     rootLogger.error("Not empty non-git repository");
-                    return "Выбранная папка не пуста и\nне является репозиторием git";
+                    return "Выбранная папка не пуста и не является репозиторием git";
                 }
             }
         } catch (IOException e) {
             rootLogger.error(e.getMessage());
-            return "Ошибка выполнения\nкоманды git pull";
+            return "Ошибка выполнения команды git pull";
         }
     }
 }

@@ -6,12 +6,10 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.AnchorPane?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0"
-            prefWidth="540.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="src.application.Controller.LoginController">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="540.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="src.application.Controller.LoginController">
    <children>
       <TextField fx:id="tokenField" layoutX="146.0" layoutY="203.0" prefHeight="25.0" prefWidth="200.0" promptText="your token" text="glpat-u_xNuwLFH-dW66uHigMz" />
-      <Button fx:id="logIn" layoutX="344.0" layoutY="203.0" mnemonicParsing="false" onAction="#authorization" text="Log In" />
+      <Button fx:id="logIn" layoutX="344.0" layoutY="203.0" mnemonicParsing="false" onAction="#authorization" prefHeight="25.0" prefWidth="49.0" text="Вход" />
       <ChoiceBox fx:id="protocolChoice" layoutX="147.0" layoutY="168.0" prefHeight="25.0" prefWidth="71.0" />
       <TextField fx:id="domainField" layoutX="218.0" layoutY="168.0" prefHeight="25.0" prefWidth="175.0" promptText="git domain" text="gitlab.com" />
       <Label fx:id="errorLabel" alignment="CENTER" layoutX="147.0" layoutY="93.0" prefHeight="75.0" prefWidth="246.0" textAlignment="CENTER" textFill="RED" />
