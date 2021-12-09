@@ -1,30 +1,25 @@
 package src.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.springframework.web.client.RestTemplate;
-import src.application.Entity.Repository;
 import src.application.Entity.RepositoryContainer;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 import java.util.ResourceBundle;
 
 /**
@@ -47,7 +42,7 @@ public class LoginController implements Initializable {
     @FXML
     private ChoiceBox<String> protocolChoice;
     @FXML
-    public Button logIn;
+    public Button loginButton = new Button();
     @FXML
     private Label errorLabel = new Label();
 
@@ -66,6 +61,9 @@ public class LoginController implements Initializable {
         }
         protocolChoice.getItems().setAll(protocols);
         protocolChoice.setOnAction(event -> curProtocol = protocolChoice.getValue());
+        protocolChoice.setValue("https://");
+        tokenField.setText("glpat-u_xNuwLFH-dW66uHigMz");
+        domainField.setText("gitlab.com");
     }
 
     /**
@@ -75,6 +73,8 @@ public class LoginController implements Initializable {
     @FXML
     public void authorization(ActionEvent event) {
         errorLabel.setText("");
+        Scene curScene = tokenField.getScene();
+        curScene.setCursor(Cursor.WAIT);
         rootLogger.info("Calling authorization()");
         this.repositories.setToken(tokenField.getText());
         String domain = domainField.getText();
@@ -124,9 +124,9 @@ public class LoginController implements Initializable {
         } catch (Exception e) {
             rootLogger.error(e.getMessage());
             if (e.getMessage().contains("403 Forbidden"))
-                errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nИли неверно указан домен");
+                errorLabel.setText("Токен не обладает нужными правами\n(Требуется доступ к API)\nили неверно указан домен");
             else if (e.getMessage().contains("410 Gone") || e.getMessage().contains("404 Not Found") || e.getMessage().contains("UnknownHostException"))
-                errorLabel.setText("Неверный домен или отсутствует подключение к интернету");
+                errorLabel.setText("Неверный домен или отсутствует\nподключение к интернету");
             else if (e.getMessage().equals("Protocol not specified") || e.getMessage().contains("Response 301"))
                 errorLabel.setText("Неверно указан протокол");
             else if (e.getMessage().contains("401 Unauthorized"))
@@ -134,6 +134,7 @@ public class LoginController implements Initializable {
             else if (e.getMessage().contains("I/O error"))
                 errorLabel.setText("Проверьте подключение к интернету");
         }
+        curScene.setCursor(Cursor.DEFAULT);
         rootLogger.info("Result of authorization(): called update()");
     }
 

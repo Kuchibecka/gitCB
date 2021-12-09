@@ -207,6 +207,7 @@ public class RepoController implements Initializable {
     public void cloneRepo() {
         progressBar.setVisible(true);
         Scene scene = cloneButton.getScene();
+
         scene.setCursor(Cursor.WAIT);
         enableButtons(false);
         errorLabel2.setText("");
