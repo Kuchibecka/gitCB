@@ -1,4 +1,4 @@
-package src.application;
+package src.application.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import javafx.collections.FXCollections;
@@ -81,6 +81,7 @@ public class RepoController implements Initializable {
      * @param repositories - контейнер репозиториев, передающийся со сцены авторизации
      */
     public void setRepositories(RepositoryContainer repositories) {
+        progressBar.setVisible(false);
         this.repositories = repositories;
         nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
@@ -94,8 +95,6 @@ public class RepoController implements Initializable {
      * Получить список репозиториев как результат API запроса
      */
     public HashMap<String, Repository> request(String url) throws Exception {
-        /*Scene scene = cloneButton.getScene();
-        scene.setCursor(Cursor.WAIT);*/
         rootLogger.info("Calling request(" + url + ")");
         HashMap<String, Repository> repoMap = new HashMap<>();
         RestTemplate restTemplate = new RestTemplate();
@@ -207,7 +206,6 @@ public class RepoController implements Initializable {
     public void cloneRepo() {
         progressBar.setVisible(true);
         Scene scene = cloneButton.getScene();
-
         scene.setCursor(Cursor.WAIT);
         enableButtons(false);
         errorLabel2.setText("");
@@ -238,45 +236,41 @@ public class RepoController implements Initializable {
         progressLabel.textProperty().unbind();
         progressLabel.textProperty().bind(cloneTask.messageProperty());
 
-        cloneTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED,
-                event -> {
-                    //progressBar.setVisible(false);
-                    String result = cloneTask.getValue();
-                    progressLabel.textProperty().unbind();
-                    if (result.equals("none"))
-                        progressLabel.setText("Готово");
-                    else {
-                        if (result.equals("Непустая папка с таким\nназванием уже существует")) {
-                            String name = curRepoName.toLowerCase().replace(" ", "-");
-                            String updateCommand = "cd " + curDirectory + "\\" + name + " && " + "git pull";
-                            System.out.println("_____________command:" + updateCommand);
-                            UpdateTask updateTask = new UpdateTask(rootLogger, updateCommand);
-                            progressBar.progressProperty().unbind();
-                            progressBar.progressProperty().bind(updateTask.progressProperty());
-                            updateTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED,
-                                    e -> {
-                                        String res = updateTask.getValue();
-                                        // progressLabel.textProperty().unbind();
-                                        switch (res) {
-                                            case "No changes":
-                                                progressLabel.setText("Репозиторий актуален,\nизменений нет");
-                                                break;
-                                            case "Репозиторий обновлён\nдо актуальной версии":
-                                                progressLabel.setText("Репозиторий обновлён\nдо актуальной версии");
-                                                break;
-                                            default:
-                                                errorLabel2.setText(res);
-                                                progressBar.setVisible(false);
-                                                break;
-                                        }
-                                    });
-                            new Thread(updateTask).start();
-                        } else
-                            errorLabel2.setText(result);
-                    }
-                    scene.setCursor(Cursor.DEFAULT);
-                    enableButtons(true);
-                });
+        cloneTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, event -> {
+            String result = cloneTask.getValue();
+            progressLabel.textProperty().unbind();
+            if (result.equals("none"))
+                progressLabel.setText("Готово");
+            else {
+                if (result.equals("Непустая папка с таким\nназванием уже существует")) {
+                    String name = curRepoName.toLowerCase().replace(" ", "-");
+                    String updateCommand = "cd " + curDirectory + "\\" + name + " && " + "git pull";
+                    rootLogger.debug("Update command for ProcessBuilder: " + updateCommand);
+                    UpdateTask updateTask = new UpdateTask(rootLogger, updateCommand);
+                    progressBar.progressProperty().unbind();
+                    progressBar.progressProperty().bind(updateTask.progressProperty());
+                    updateTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, e -> {
+                        String res = updateTask.getValue();
+                        switch (res) {
+                            case "No changes":
+                                progressLabel.setText("Репозиторий актуален,\nизменений нет");
+                                break;
+                            case "Репозиторий обновлён\nдо актуальной версии":
+                                progressLabel.setText("Репозиторий обновлён\nдо актуальной версии");
+                                break;
+                            default:
+                                errorLabel2.setText(res);
+                                progressBar.setVisible(false);
+                                break;
+                        }
+                    });
+                    new Thread(updateTask).start();
+                } else
+                    errorLabel2.setText(result);
+            }
+            scene.setCursor(Cursor.DEFAULT);
+            enableButtons(true);
+        });
         new Thread(cloneTask).start();
         rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
     }
