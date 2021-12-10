@@ -10,23 +10,41 @@ import java.io.InputStreamReader;
 /**
  * Задача обновления репозитория до актуального состояния
  */
-public class UpdateTask extends Task<String> {
+public class UpdateTask extends Task<Integer> {
     private Logger rootLogger;
-    private final String updateCommand;
+    private final String repoName;
+    private final String directory;
+    private final String token;
+    private final String repoUrl;
 
-    public UpdateTask(Logger rootLogger, String updateCommand) {
+    public UpdateTask(String repoName, String directory, String token, String repoUrl, Logger rootLogger) {
+        this.repoName = repoName;
+        this.directory = directory;
+        this.token = token;
+        this.repoUrl = repoUrl;
         this.rootLogger = rootLogger;
-        this.updateCommand = updateCommand;
     }
 
     /**
-     * @return String Статус завершения задачи обновления репозитория
+     * Функция, выполняющаяся при запуске updateTask
+     *
+     * @return Integer Статус завершения задачи обновления репозитория:
+     * 0    -   локальный репозиторий актуален
+     * 1    -   локальный репозиторий обновлён до актуального
+     * -1   -   ошибка: выбранная папка непуста и не является репозиторием git
      */
     @Override
-    protected String call() {
+    protected Integer call() {
         rootLogger.info("Calling git repository update task");
         try {
-            ProcessBuilder pullBuilder = new ProcessBuilder("cmd.exe", "/c", this.updateCommand);
+            String name = repoName.toLowerCase().replace(" ", "-");
+            String pbCommand = "cd " + directory + "\\" + name + " && "
+                    + "git pull https://gitlab-ci-token:"
+                    + token
+                    + "@"
+                    + repoUrl;
+            rootLogger.debug("Update command for ProcessBuilder: " + pbCommand);
+            ProcessBuilder pullBuilder = new ProcessBuilder("cmd.exe", "/c", pbCommand);
             pullBuilder.redirectErrorStream(true);
             Process pullProcess = pullBuilder.start();
             BufferedReader pullReader = new BufferedReader(new InputStreamReader(pullProcess.getInputStream()));
@@ -35,28 +53,32 @@ public class UpdateTask extends Task<String> {
                 line = pullReader.readLine();
                 rootLogger.debug("Trace from ProcessBuilder: " + line);
                 if (line.contains("Already up to date")) {
-                    this.updateProgress(100,100);
+                    this.updateProgress(100, 100);
                     rootLogger.debug("No changes detected");
-                    return "No changes";
+                    return 0;
                 }
                 if (line.contains("detecting host provider")) {
-                    this.updateProgress(25,100);
+                    this.updateProgress(25, 100);
                 }
                 if (line.contains("Updating")) {
-                    this.updateProgress(50,100);
+                    this.updateProgress(50, 100);
                 }
                 if (line.contains("changed")) {
-                    this.updateProgress(100,100);
-                    return "Репозиторий обновлён до актуальной версии";
+                    this.updateProgress(100, 100);
+                    return 1;
                 }
                 if (line.contains("fatal: not a git repository")) {
                     rootLogger.error("Not empty non-git repository");
-                    return "Выбранная папка не пуста и не является репозиторием git";
+                    return -1;
+                }
+                if (line.contains("fatal: refusing to merge unrelated histories")) {
+                    rootLogger.error("Not empty git repository. Unable to merge histories");
+                    return -2;
                 }
             }
         } catch (IOException e) {
             rootLogger.error(e.getMessage());
-            return "Ошибка выполнения команды git pull";
+            return -3;
         }
     }
 }

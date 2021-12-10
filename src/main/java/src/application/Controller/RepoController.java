@@ -84,21 +84,26 @@ public class RepoController implements Initializable {
                 curRepoUrl = repository
                         .getRepoUrl()
                         .substring(8);
+                curRepoName = repository
+                        .getRepoName();
                 curRepoDescription = repository
                         .getRepoDescription();
                 descriptionLabel.setText(repository.getRepoName());
                 descriptionLabelLabel.setVisible(true);
             }
+            progressBar.setVisible(false);
+            progressLabel.setVisible(false);
             rootLogger.debug("Selected repo with name: " + nameList.getSelectionModel().getSelectedItem() + " and URL: " + curRepoUrl);
         });
     }
 
     /**
-     * Сеттер для контейнера репозиториев
+     * Сеттер контейнера репозиториев
      *
      * @param repositories - контейнер репозиториев, передающийся со сцены авторизации
      */
     public void setRepositories(RepositoryContainer repositories) {
+        rootLogger.info("Calling setRepositories(" + repositories.toString() + ")");
         this.repositories = repositories;
         nameList.setItems(FXCollections.observableArrayList());
         nameList.getItems().addAll(
@@ -106,6 +111,7 @@ public class RepoController implements Initializable {
                         this.repositories.getRepoMap().keySet()
                 )
         );
+        rootLogger.info("Result of setRepositories(...), nameList: {" + nameList.getItems().toString() + "}");
     }
 
     /**
@@ -125,27 +131,35 @@ public class RepoController implements Initializable {
         for (Repository repo : repos)
             repoMap.put(repo.getRepoName(), repo);
         rootLogger.info("Request result in this.repositories: " + repoMap.toString());
-        /*scene.setCursor(Cursor.DEFAULT);*/
         return repoMap;
     }
 
     /**
      * Блокировка/разблокировка кнопок для выполняющихся процессов
      *
-     * @param b - включение кнопок - true, отключение - false
+     * @param b: true - включение кнопок, false - отключение
      */
     public void enableButtons(boolean b) {
+        rootLogger.info("Calling enableButtons(" + b + ")");
         cloneButton.setDisable(!b);
         updateButton.setDisable(!b);
         backButton.setDisable(!b);
         pathButton.setDisable(!b);
+        rootLogger.info("Result of enableButtons(), is enabled: {"
+                + "cloneButton: " + !cloneButton.isDisabled()
+                + ", updateButton: " + !updateButton.isDisabled()
+                + ", backButton: " + !backButton.isDisabled()
+                + ", pathButton: " + !pathButton.isDisabled()
+                + "}"
+        );
     }
 
     /**
-     * Функция выбора пути для клонирования
+     * Функция выбора пути для клонирования удалённого репозитория / актуализации локального репозитория
      */
     @FXML
     public void pickPath() {
+        rootLogger.info("Calling pickPath()");
         progressBar.setVisible(false);
         errorLabel2.setText("");
         DirectoryChooser dirChooser = new DirectoryChooser();
@@ -161,17 +175,17 @@ public class RepoController implements Initializable {
             errorLabel2.setText("Выбранной директории не существует");
             rootLogger.error("No such directory");
         }
-        rootLogger.debug("Picked directory: " + this.curDirectory);
+        rootLogger.info("Result of pickPath() picked directory: " + this.curDirectory);
     }
 
     /**
-     * Функция обновления списка репозиториев
+     * Функция обновления списка удалённых репозиториев
      */
     @FXML
     public void update() {
+        rootLogger.info("Calling update()");
         enableButtons(false);
         nameList.setItems(FXCollections.observableArrayList());
-        rootLogger.info("Calling update()");
         errorLabel2.setText("");
         try {
             this.repositories
@@ -205,6 +219,7 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void getBackToLogin(ActionEvent event) {
+        rootLogger.info("Calling getBackToLogin()");
         try {
             Parent root = FXMLLoader.load(getClass().getResource("/fxml/Login.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -222,15 +237,13 @@ public class RepoController implements Initializable {
      */
     @FXML
     public void cloneRepo() {
+        rootLogger.info("Calling cloneRepo()");
         progressBar.setVisible(true);
+        progressLabel.setVisible(true);
         Scene scene = cloneButton.getScene();
         scene.setCursor(Cursor.WAIT);
         enableButtons(false);
         errorLabel2.setText("");
-        rootLogger.info("Calling cloneRepo()");
-        String command = "git clone --progress https://gitlab-ci-token:"
-                + this.repositories.getToken() + "@" + curRepoUrl;
-        rootLogger.debug("Command for ProcessBuilder is: " + command);
         if (curRepoUrl == null || curRepoUrl.isEmpty()) {
             rootLogger.error("Cloning repository URL not specified");
             errorLabel2.setText("Репозиторий для клонирования не выбран");
@@ -247,48 +260,70 @@ public class RepoController implements Initializable {
             progressBar.setVisible(false);
             return;
         }
-        String pbCommand = "cd " + curDirectory + " && " + command;
-        CloneTask cloneTask = new CloneTask(pbCommand, rootLogger);
+        CloneTask cloneTask = new CloneTask(curDirectory, repositories.getToken(), curRepoUrl, rootLogger);
         progressBar.progressProperty().unbind();
         progressBar.progressProperty().bind(cloneTask.progressProperty());
         progressLabel.textProperty().unbind();
         progressLabel.textProperty().bind(cloneTask.messageProperty());
 
         cloneTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, event -> {
-            String result = cloneTask.getValue();
+            rootLogger.info("Caught event in cloneTask.EventHandler()");
+            Integer result = cloneTask.getValue();
+            rootLogger.debug("Got cloneTask result: " + result);
             progressLabel.textProperty().unbind();
-            if (result.equals("none"))
+            if (result == 1) {
+                rootLogger.debug("cloneTask ended successfully, repository cloned");
                 progressLabel.setText("Готово");
-            else {
-                if (result.equals("Непустая папка с таким названием уже существует")) {
-                    String name = curRepoName.toLowerCase().replace(" ", "-");
-                    String updateCommand = "cd " + curDirectory + "\\" + name + " && " + "git pull";
-                    rootLogger.debug("Update command for ProcessBuilder: " + updateCommand);
-                    UpdateTask updateTask = new UpdateTask(rootLogger, updateCommand);
-                    progressBar.progressProperty().unbind();
-                    progressBar.progressProperty().bind(updateTask.progressProperty());
-                    updateTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, e -> {
-                        String res = updateTask.getValue();
-                        switch (res) {
-                            case "No changes":
-                                progressLabel.setText("Репозиторий актуален, изменений нет");
-                                break;
-                            case "Репозиторий обновлён до актуальной версии":
-                                progressLabel.setText("Репозиторий обновлён до актуальной версии");
-                                break;
-                            default:
-                                errorLabel2.setText(res);
-                                progressBar.setVisible(false);
-                                break;
-                        }
-                    });
-                    new Thread(updateTask).start();
-                } else
-                    errorLabel2.setText(result);
+                progressLabel.setVisible(true);
+            } else if (result == 0) {
+                rootLogger.debug("cloneTask ended with 'already exists' warning. Trying to update repository.");
+                UpdateTask updateTask = new UpdateTask(curRepoName, curDirectory, repositories.getToken(), curRepoUrl, rootLogger);
+                progressBar.progressProperty().unbind();
+                progressBar.progressProperty().bind(updateTask.progressProperty());
+                updateTask.addEventHandler(WorkerStateEvent.WORKER_STATE_SUCCEEDED, e -> {
+                    rootLogger.info("Caught event in updateTask.EventHandler()");
+                    Integer res = updateTask.getValue();
+                    rootLogger.debug("Got updateTask result: " + res);
+                    switch (res) {
+                        case 0:
+                            rootLogger.debug("updateTask ended successfully: repository is actual");
+                            progressLabel.setText("Репозиторий актуален, изменений нет");
+                            break;
+                        case 1:
+                            rootLogger.debug("updateTask ended successfully: repository updated to actual");
+                            progressLabel.setText("Репозиторий обновлён до актуальной версии");
+                            break;
+                        case -1:
+                            rootLogger.debug("updateTask ended with error: chosen directory isn't a git neither empty repository");
+                            errorLabel2.setText("Выбранная папка не пуста и не является репозиторием git");
+                            progressBar.setVisible(false);
+                            break;
+                        case -2:
+                            rootLogger.debug("updateTask ended with error: chosen directory is an incompatible git repository");
+                            errorLabel2.setText("Выбранная папка является git-репозиторием, несовместимым с выбранным");
+                            progressBar.setVisible(false);
+                            break;
+                        default:
+                            rootLogger.error("updateTask ended with error: unknown error");
+                            errorLabel2.setText("Неизвестная ошибка при выполнении команды git pull");
+                            progressBar.setVisible(false);
+                            break;
+                    }
+                });
+                rootLogger.debug("Running updateTask");
+                new Thread(updateTask).start();
+            } else if (result == -1) {
+                rootLogger.debug("cloneTask ended with error");
+                errorLabel2.setText("Ошибка выполнения команды git clone");
+            }
+            else { //todo: проверить на сдвоенные логи
+                rootLogger.error("cloneTask ended with error: unknown error");
+                errorLabel2.setText("Неизвестная ошибка");
             }
             scene.setCursor(Cursor.DEFAULT);
             enableButtons(true);
         });
+        rootLogger.debug("Running cloneTask");
         new Thread(cloneTask).start();
         rootLogger.info("Result of cloneRepo(): executed attempt to clone selected repository");
     }

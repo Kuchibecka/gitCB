@@ -1,6 +1,8 @@
 package src.application.Entity;
 
 import javafx.concurrent.Task;
+import javafx.concurrent.WorkerStateEvent;
+import javafx.event.Event;
 import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -10,34 +12,33 @@ import java.io.InputStreamReader;
 /**
  * Задача клонирования репозитория
  */
-public class CloneTask extends Task<String> {
+public class CloneTask extends Task<Integer> {
+    private final String directory;
+    private final String token;
+    private final String repoUrl;
+    private final Logger rootLogger;
 
-    private String cloneCommand;
-
-    private Logger rootLogger;
-
-    public CloneTask(String cloneCommand, Logger rootLogger) {
-        this.cloneCommand = cloneCommand;
+    public CloneTask(String directory, String token, String repoUrl, Logger rootLogger) {
+        this.directory = directory;
+        this.token = token;
+        this.repoUrl = repoUrl;
         this.rootLogger = rootLogger;
-    }
-
-    public String getCloneCommand() {
-        return cloneCommand;
-    }
-
-    public void setCloneCommand(String cloneCommand) {
-        this.cloneCommand = cloneCommand;
     }
 
     /**
      * @return String Статус завершения задачи клонирования репозитория
      */
     @Override
-    protected String call() {
+    protected Integer call() {
         rootLogger.info("Calling git clone task");
         try {
-            rootLogger.debug("Full command for ProcessBuilder is: " + cloneCommand);
-            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", cloneCommand);
+            String pbCommand = "cd " + directory + " && "
+                    + "git clone --progress https://gitlab-ci-token:"
+                    + token
+                    + "@"
+                    + repoUrl;
+            rootLogger.debug("Command for ProcessBuilder is: " + pbCommand);
+            ProcessBuilder builder = new ProcessBuilder("cmd.exe", "/c", pbCommand);
             builder.redirectErrorStream(true);
             Process p = builder.start();
             BufferedReader r = new BufferedReader(new InputStreamReader(p.getInputStream()));
@@ -47,6 +48,7 @@ public class CloneTask extends Task<String> {
             while (true) {
                 line = r.readLine();
                 if (line == null) {
+                    this.updateProgress(100, 100);
                     break;
                 }
                 if (line.contains(":") && line.contains("%") && !line.contains("done")) {
@@ -59,19 +61,21 @@ public class CloneTask extends Task<String> {
                             progress = 0;
                     }
                 }
+                //todo: Это может быть не последний этап клонирования
                 if (line.contains("Receiving objects: 100%"))
                     this.updateProgress(400, 400);
                 rootLogger.debug("Trace from ProcessBuilder: " + line);
                 if (line.contains("already exists and is not an empty directory.")) {
-                    rootLogger.debug("Directory already exists. Trying to update repository");
                     this.updateProgress(0, 400);
-                    return "Непустая папка с таким названием уже существует";
+                    rootLogger.debug("Directory already exists. Trying to update repository");
+                    return 0;
                 }
             }
         } catch (IOException e) {
-            rootLogger.error(e.getMessage());
-            return "Ошибка выполнения команды git clone";
+            rootLogger.error("CloneTask ended with error: " + e.getMessage());
+            return -1;
         }
-        return "none";
+        rootLogger.debug("Repository cloned successfully");
+        return 1;
     }
 }

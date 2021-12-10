@@ -23,9 +23,10 @@ import java.util.ResourceBundle;
  * ТОКЕН ДЛЯ АВТОРИЗАЦИИ: glpat-u_xNuwLFH-dW66uHigMz
  * ТОКЕН БЕЗ API: glpat-AGW_F2nA9uzypQVA9B6Q
  * ТЕСТОВЫЙ ПУТЬ КЛОНИРОВАНИЯ: C:\Users\Администратор\Downloads\testFolder
- *
+ * <p>
  * http://gitlab.dev.ppod.cbr.ru/
  */
+@SuppressWarnings("FieldMayBeFinal")
 public class LoginController implements Initializable {
     private String curProtocol;
     private RepositoryContainer repositories = new RepositoryContainer();
@@ -67,7 +68,6 @@ public class LoginController implements Initializable {
     }
 
     /**
-     * Сцена авторизации
      * Авторизация по считываемому токену и отображение списка репозиториев
      */
     @FXML
