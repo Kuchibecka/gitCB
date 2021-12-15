@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 import src.application.Entity.RepositoryContainer;
 
 import java.net.URL;
+import java.util.HashMap;
 import java.util.ResourceBundle;
 
 /**
@@ -91,15 +92,33 @@ public class LoginController implements Initializable {
             errorLabel.setText("Не указан токен");
             return;
         }
-        this.repositories.setRequestUrl(
-                curProtocol
-                        + domain
-                        + "/api/v4/projects/"
-                        + "?membership=true"
-                        + "&simple=true"
-                        + "&private_token="
-                        + this.repositories.getToken()
-        );
+        HashMap<String, String> headers = new HashMap<>();
+        if (domain.contains("gitlab")) {
+            this.repositories.setRequestUrl(
+                    curProtocol
+                            + domain
+                            + "/api/v4/projects/"
+                            + "?membership=true"
+                            + "&simple=true"
+                            + "&private_token="
+                            + this.repositories.getToken()
+            );
+            this.repositories.setHeaders(headers);
+        }
+
+        // https://api.github.com/users/Kuchibecka/repos
+        //      header: Authorization: token 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
+        // todo: Не работает взаимодействие с github
+
+        else if (domain.contains("github")) {
+            this.repositories.setRequestUrl(
+                    curProtocol
+                            + "api.github.com/user/repos"
+                    // + this.repositories.getToken()
+            );
+            headers.put("Authorization", "token " + this.repositories.getToken());
+            this.repositories.setHeaders(headers);
+        } //todo: else выкинуть ошибку
         rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/RepositoryTable.fxml"));

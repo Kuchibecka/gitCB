@@ -6,6 +6,7 @@ public class RepositoryContainer {
     private String token;
     private HashMap<String, Repository> repoMap = new HashMap<>();
     private String requestUrl;
+    private HashMap<String, String> headers;
 
     public RepositoryContainer(String token, HashMap<String, Repository> repoMap) {
         this.token = token;
@@ -37,6 +38,14 @@ public class RepositoryContainer {
 
     public void setRequestUrl(String requestUrl) {
         this.requestUrl = requestUrl;
+    }
+
+    public void setHeaders(HashMap<String, String> headers) {
+        this.headers = headers;
+    }
+
+    public HashMap<String, String> getHeaders() {
+        return headers;
     }
 
     public void addRepoMap(String name, Repository repo) {

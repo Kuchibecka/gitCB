@@ -1,6 +1,7 @@
 package src.application.Controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.xml.internal.ws.api.model.CheckedException;
 import javafx.collections.FXCollections;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
@@ -16,6 +17,7 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import src.application.Entity.CloneTask;
 import src.application.Entity.Repository;
@@ -33,7 +35,6 @@ public class RepoController implements Initializable {
     private RepositoryContainer repositories = new RepositoryContainer();
     private String curRepoUrl;
     private String curRepoName;
-    private String curRepoDescription;
     private String curDirectory;
 
     @FXML
@@ -86,8 +87,6 @@ public class RepoController implements Initializable {
                         .substring(8);
                 curRepoName = repository
                         .getRepoName();
-                curRepoDescription = repository
-                        .getRepoDescription();
                 descriptionLabel.setText(repository.getRepoName());
                 descriptionLabelLabel.setVisible(true);
             }
@@ -99,6 +98,7 @@ public class RepoController implements Initializable {
 
     /**
      * Сеттер контейнера репозиториев
+     * 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
      *
      * @param repositories - контейнер репозиториев, передающийся со сцены авторизации
      */
@@ -121,7 +121,27 @@ public class RepoController implements Initializable {
         rootLogger.info("Calling request(" + url + ")");
         HashMap<String, Repository> repoMap = new HashMap<>();
         RestTemplate restTemplate = new RestTemplate();
-        String json = restTemplate.getForObject(url, String.class);
+        String json = "";
+        if (this.repositories.getHeaders().isEmpty())
+            json = restTemplate.getForObject(url, String.class);
+        else if (this.repositories.getHeaders().containsKey("Authorization")) {
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Authorization", this.repositories.getHeaders().get("Authorization"));
+            HttpEntity request = new HttpEntity(headers);
+            ResponseEntity<String> response;
+            response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    request,
+                    String.class,
+                    1
+            );
+            if (response.getStatusCode() == HttpStatus.OK) {
+                // todo: логи
+                json = response.getBody();
+            } //todo: else обработка ошибок
+        } // todo: else ошибка?
+        // todo: соответственно переделать команды в CloneTask и UpdateTask под github
         if (json == null || json.isEmpty()) {
             throw new Exception("Protocol not specified");
         }
@@ -313,10 +333,9 @@ public class RepoController implements Initializable {
                 rootLogger.debug("Running updateTask");
                 new Thread(updateTask).start();
             } else if (result == -1) {
-                rootLogger.debug("cloneTask ended with error");
+                rootLogger.error("cloneTask ended with error");
                 errorLabel2.setText("Ошибка выполнения команды git clone");
-            }
-            else { //todo: проверить на сдвоенные логи
+            } else { //todo: проверить на сдвоенные логи
                 rootLogger.error("cloneTask ended with error: unknown error");
                 errorLabel2.setText("Неизвестная ошибка");
             }
