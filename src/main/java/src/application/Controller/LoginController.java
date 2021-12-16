@@ -117,13 +117,16 @@ public class LoginController implements Initializable {
                     // + this.repositories.getToken()
             );
             headers.put("Authorization", "token " + this.repositories.getToken());
+            rootLogger.debug("headers in auth(): " + headers);
             this.repositories.setHeaders(headers);
+            rootLogger.debug("headers in auth() repositories: " + this.repositories.getHeaders());
         } //todo: else выкинуть ошибку
         rootLogger.debug("Created url for request: " + this.repositories.getRequestUrl());
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/RepositoryTable.fxml"));
             Parent root = loader.load();
             RepoController repoController = loader.getController();
+            repoController.setRepositories(this.repositories);
             this.repositories
                     .setRepoMap(
                             repoController.request(this.repositories.getRequestUrl())
@@ -134,7 +137,7 @@ public class LoginController implements Initializable {
                 return;
             } else {
                 rootLogger.debug("this.repositories after calling request(): " + this.repositories);
-                repoController.setRepositories(this.repositories);
+                /*repoController.setRepositories(this.repositories);*/
                 Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
                 Scene scene = new Scene(root);
                 stage.setScene(scene);

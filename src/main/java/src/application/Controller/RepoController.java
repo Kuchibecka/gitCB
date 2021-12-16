@@ -99,6 +99,7 @@ public class RepoController implements Initializable {
     /**
      * Сеттер контейнера репозиториев
      * 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
+     * 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
      *
      * @param repositories - контейнер репозиториев, передающийся со сцены авторизации
      */
@@ -119,15 +120,18 @@ public class RepoController implements Initializable {
      */
     public HashMap<String, Repository> request(String url) throws Exception {
         rootLogger.info("Calling request(" + url + ")");
+        rootLogger.debug("this.repositories: " + this.repositories.toString());
         HashMap<String, Repository> repoMap = new HashMap<>();
         RestTemplate restTemplate = new RestTemplate();
         String json = "";
-        if (this.repositories.getHeaders().isEmpty())
+        /*if (!this.repositories.getHeaders().containsKey("Authorization"))
             json = restTemplate.getForObject(url, String.class);
-        else if (this.repositories.getHeaders().containsKey("Authorization")) {
+        else if (this.repositories.getHeaders().containsKey("Authorization")) {*/
             HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", this.repositories.getHeaders().get("Authorization"));
+            headers.set("Authorization", "token " + this.repositories.getToken());
+            System.out.println("Headers " + headers);
             HttpEntity request = new HttpEntity(headers);
+            System.out.println("Request: " + request);
             ResponseEntity<String> response;
             response = restTemplate.exchange(
                     url,
@@ -137,10 +141,11 @@ public class RepoController implements Initializable {
                     1
             );
             if (response.getStatusCode() == HttpStatus.OK) {
+                rootLogger.debug("GOT JSON FROM exchange(): " + json);
                 // todo: логи
                 json = response.getBody();
             } //todo: else обработка ошибок
-        } // todo: else ошибка?
+        /*}*/ // todo: else ошибка?
         // todo: соответственно переделать команды в CloneTask и UpdateTask под github
         if (json == null || json.isEmpty()) {
             throw new Exception("Protocol not specified");
