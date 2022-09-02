@@ -1,4 +1,4 @@
-# Клиент github
+# Клиент gitlab
 ![javafx v17.0.1](https://img.shields.io/badge/javafx-v2.4.1-informational)
 ![jackson v2.13.0](https://img.shields.io/badge/jackson-v2.13.0-orange)
 ![springframework v5.3.9](https://img.shields.io/badge/springframework-v5.3.9-success)
